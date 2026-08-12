@@ -1,0 +1,42 @@
+{
+  "name": "turnos-mvp",
+  "private": true,
+  "packageManager": "pnpm@10.11.0",
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "format": "turbo format",
+    "format:check": "prettier --check .",
+    "test": "turbo test",
+    "db:migrate": "pnpm --filter @turnos/database db:migrate",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.1.2",
+    "prettier": "^3.4.2",
+    "turbo": "^2.5.4"
+  },
+  "lint-staged": {
+    "apps/api/**/*.{ts,tsx}": [
+      "pnpm --filter @turnos/api exec eslint --fix --"
+    ],
+    "apps/web/**/*.{ts,tsx}": [
+      "pnpm --filter @turnos/web exec eslint --fix --"
+    ],
+    "*.{ts,tsx,json,md}": [
+      "prettier --write"
+    ]
+  },
+  "prettier": "@turnos/config/prettier",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@prisma/client",
+      "@prisma/engines",
+      "prisma"
+    ]
+  }
+}

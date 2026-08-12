@@ -1,0 +1,174 @@
+// Sistema de Gestión de Turnos — Modelo de datos
+// PostgreSQL + Prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum RolUsuario {
+  ADMIN
+  RECEPCIONISTA
+  MEDICO
+}
+
+enum TipoTurno {
+  PRIMER_TURNO
+  CONTROL
+  SOBRETURNO
+  URGENTE
+}
+
+enum EstadoTurno {
+  PROGRAMADO
+  CONFIRMADO
+  CANCELADO
+  VENCIDO
+}
+
+model Usuario {
+  id                  String    @id @default(uuid())
+  documentoIdentidad  String    @unique @map("documento_identidad")
+  nombre              String
+  apellido            String
+  mail                String    @unique
+  passwordHash        String    @map("password_hash")
+  rol                 RolUsuario
+  activo              Boolean   @default(true)
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  // Relaciones — solo aplican si rol = MEDICO
+  especialidades      MedicoEspecialidad[]
+  consultorio         MedicoConsultorio?
+
+  // Turnos donde este usuario es el médico atendiendo
+  turnosComoMedico    Turno[]           @relation("MedicoDeTurno")
+  // Turnos que este usuario (recepcionista) creó
+  turnosCreados       Turno[]           @relation("CreadorDeTurno")
+
+  // Bloqueos de agenda donde este usuario es el médico bloqueado
+  bloqueosComoMedico  BloqueoAgenda[]   @relation("MedicoBloqueado")
+  // Bloqueos que este usuario (recepcionista) registró
+  bloqueosCreados     BloqueoAgenda[]   @relation("CreadorDeBloqueo")
+
+  @@map("usuarios")
+}
+
+model Especialidad {
+  id      String @id @default(uuid())
+  nombre  String @unique
+
+  medicos MedicoEspecialidad[]
+  turnos  Turno[]
+
+  @@map("especialidades")
+}
+
+// Tabla puente many-to-many: un médico puede tener varias especialidades
+model MedicoEspecialidad {
+  medicoId       String @map("medico_id")
+  especialidadId String @map("especialidad_id")
+
+  medico       Usuario      @relation(fields: [medicoId], references: [id])
+  especialidad Especialidad @relation(fields: [especialidadId], references: [id])
+
+  @@id([medicoId, especialidadId])
+  @@map("medico_especialidad")
+}
+
+// Relación 1:1 fija médico <-> consultorio, configurada por el recepcionista
+model MedicoConsultorio {
+  medicoId    String @id @map("medico_id")
+  consultorio String // texto libre, se normaliza a mayúsculas en la capa de aplicación
+
+  medico Usuario @relation(fields: [medicoId], references: [id])
+
+  @@map("medico_consultorio")
+}
+
+model Paciente {
+  id        String   @id @default(uuid())
+  documento String   @unique
+  nombre    String
+  apellido  String
+  telefono  String?
+  mail      String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  turnos Turno[]
+
+  @@map("pacientes")
+}
+
+model Turno {
+  id                    String      @id @default(uuid())
+  pacienteId            String      @map("paciente_id")
+  medicoId              String      @map("medico_id")
+  especialidadId        String      @map("especialidad_id")
+  creadoPorId           String      @map("creado_por")
+  fechaInicio           DateTime    @map("fecha_inicio")
+  fechaFin              DateTime    @map("fecha_fin")
+  tipo                  TipoTurno
+  estado                EstadoTurno @default(PROGRAMADO)
+  motivoCancelacion     String?     @map("motivo_cancelacion")
+  notificarMail         Boolean     @default(false) @map("notificar_mail")
+  notificarWhatsapp     Boolean     @default(false) @map("notificar_whatsapp") // sin funcionalidad real en esta versión
+  createdAt             DateTime    @default(now()) @map("created_at")
+  updatedAt             DateTime    @updatedAt @map("updated_at")
+
+  paciente     Paciente     @relation(fields: [pacienteId], references: [id])
+  medico       Usuario      @relation("MedicoDeTurno", fields: [medicoId], references: [id])
+  especialidad Especialidad @relation(fields: [especialidadId], references: [id])
+  creadoPor    Usuario      @relation("CreadorDeTurno", fields: [creadoPorId], references: [id])
+
+  llamados LlamadoTurno[]
+
+  // Sin constraint único: los sobreturnos pueden compartir el mismo horario
+  // de inicio de forma intencional. La prevención de doble-booking accidental
+  // se resuelve en la capa de aplicación, dentro de una transacción que:
+  //   1) verifica si ya existe un turno para ese médico en ese rango horario,
+  //   2) si existe, y el usuario no confirmó explícitamente crear un sobreturno,
+  //      rechaza la operación,
+  //   3) si el usuario confirmó el sobreturno, inserta el nuevo turno con tipo SOBRETURNO.
+  // Todo esto ocurre dentro de una misma transacción de base de datos para
+  // evitar condiciones de carrera entre dos recepcionistas creando turnos
+  // simultáneamente para el mismo médico/horario.
+  @@index([medicoId, fechaInicio])
+  @@index([pacienteId])
+  @@map("turnos")
+}
+
+model BloqueoAgenda {
+  id           String   @id @default(uuid())
+  medicoId     String   @map("medico_id")
+  creadoPorId  String   @map("creado_por")
+  fechaInicio  DateTime @map("fecha_inicio")
+  fechaFin     DateTime @map("fecha_fin")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  medico    Usuario @relation("MedicoBloqueado", fields: [medicoId], references: [id])
+  creadoPor Usuario @relation("CreadorDeBloqueo", fields: [creadoPorId], references: [id])
+
+  @@index([medicoId, fechaInicio, fechaFin])
+  @@map("bloqueos_agenda")
+}
+
+// Registra cada llamado de turno realizado por un médico.
+// Alimenta la pantalla de sala de espera (últimos 5 turnos anunciados)
+// sin necesidad de un estado adicional en la tabla de turnos.
+model LlamadoTurno {
+  id        String   @id @default(uuid())
+  turnoId   String   @map("turno_id")
+  llamadoEn DateTime @default(now()) @map("llamado_en")
+
+  turno Turno @relation(fields: [turnoId], references: [id])
+
+  @@index([llamadoEn])
+  @@map("llamados_turno")
+}

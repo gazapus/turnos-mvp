@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestión Clínica - Agenda</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts & Lucide Icons -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'sans-serif'] },
+          colors: {
+            brand: {
+              dark: '#031027',
+              navy: '#072146',
+              blue: '#0a4282',
+              accent: '#00a884',
+              'accent-hover': '#00897b',
+              card: '#dce8f5'
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-brand-dark text-slate-100 font-sans min-h-screen flex flex-col bg-radial from-brand-blue/30 via-brand-navy to-brand-dark">
+
+  <!-- TOP HEADER -->
+  <header class="h-16 border-b border-white/10 bg-brand-navy/60 backdrop-blur-md px-6 flex items-center justify-between sticky top-0 z-50">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 rounded-lg bg-gradient-to-tr from-brand-accent to-blue-400 flex items-center justify-center font-bold text-white shadow-lg shadow-brand-accent/20">
+        <i data-lucide="activity" class="w-5 h-5"></i>
+      </div>
+      <span class="font-bold text-lg tracking-wide text-white">[LOGO DE LA APLICACIÓN]</span>
+    </div>
+
+    <div class="flex items-center gap-4">
+      <div class="text-right hidden sm:block">
+        <p class="text-sm font-semibold text-white">Dr. Alejandro Rossi</p>
+        <p class="text-xs text-blue-200/70">Cardiología</p>
+      </div>
+      <div class="w-10 h-10 rounded-full bg-brand-blue/80 border border-white/20 flex items-center justify-center text-white font-semibold">
+        AR
+      </div>
+    </div>
+  </header>
+
+  <div class="flex flex-1 overflow-hidden">
+    <!-- SIDEBAR LEFT -->
+    <aside class="w-64 border-r border-white/10 bg-brand-navy/40 backdrop-blur-md p-4 flex flex-col gap-2">
+      <nav class="space-y-1">
+        <a href="#" class="flex items-center gap-3 px-4 py-3 rounded-xl bg-brand-accent text-white font-medium shadow-lg shadow-brand-accent/20 transition-all">
+          <i data-lucide="calendar" class="w-5 h-5"></i> Agenda
+        </a>
+        <a href="#" class="flex items-center gap-3 px-4 py-3 rounded-xl text-blue-100/70 hover:bg-white/5 hover:text-white transition-all">
+          <i data-lucide="building-2" class="w-5 h-5"></i> Consultorios
+        </a>
+        <a href="#" class="flex items-center gap-3 px-4 py-3 rounded-xl text-blue-100/70 hover:bg-white/5 hover:text-white transition-all">
+          <i data-lucide="users" class="w-5 h-5"></i> Pacientes
+        </a>
+        <a href="#" class="flex items-center gap-3 px-4 py-3 rounded-xl text-blue-100/70 hover:bg-white/5 hover:text-white transition-all">
+          <i data-lucide="user-cog" class="w-5 h-5"></i> Usuarios
+        </a>
+        <a href="#" class="flex items-center gap-3 px-4 py-3 rounded-xl text-blue-100/70 hover:bg-white/5 hover:text-white transition-all">
+          <i data-lucide="clock" class="w-5 h-5"></i> Sala de Espera
+        </a>
+      </nav>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="flex-1 p-6 overflow-y-auto flex flex-col gap-5">
+      
+      <!-- CONTROLES SUPERIORES: FILTROS + NUEVO TURNO -->
+      <div class="flex flex-col lg:flex-row gap-4 items-stretch lg:items-center justify-between">
+        
+        <!-- FILTROS (Panel contenedor glassmorphism) -->
+        <div class="bg-white/10 border border-white/15 p-3 rounded-2xl backdrop-blur-md flex flex-wrap lg:flex-nowrap gap-3 items-center flex-1">
+          <div class="relative flex-1 min-w-[160px]">
+            <select class="w-full bg-brand-navy/80 border border-white/20 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-accent appearance-none">
+              <option value="">Médico (Todos)</option>
+              <option>Dr. Rossi</option>
+              <option>Dra. Gómez</option>
+            </select>
+            <i data-lucide="chevron-down" class="w-4 h-4 text-blue-200/60 absolute right-3 top-3 pointer-events-none"></i>
+          </div>
+
+          <div class="relative flex-1 min-w-[160px]">
+            <select class="w-full bg-brand-navy/80 border border-white/20 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-accent appearance-none">
+              <option value="">Especialidad (Todas)</option>
+              <option>Cardiología</option>
+              <option>Pediatría</option>
+            </select>
+            <i data-lucide="chevron-down" class="w-4 h-4 text-blue-200/60 absolute right-3 top-3 pointer-events-none"></i>
+          </div>
+
+          <div class="relative flex-1 min-w-[160px]">
+            <input type="text" placeholder="Buscar Paciente..." class="w-full bg-brand-navy/80 border border-white/20 rounded-xl px-3 py-2 text-sm text-white placeholder-blue-200/50 focus:outline-none focus:border-brand-accent" />
+          </div>
+
+          <button class="bg-brand-blue hover:bg-blue-600 border border-blue-400/30 text-white text-sm font-semibold px-5 py-2 rounded-xl transition-all shadow-md">
+            Aplicar
+          </button>
+        </div>
+
+        <!-- BOTÓN NUEVO TURNO -->
+        <button class="bg-brand-accent hover:bg-brand-accent-hover text-white font-semibold px-6 py-3 rounded-2xl shadow-lg shadow-brand-accent/25 flex items-center justify-center gap-2 transition-all">
+          <i data-lucide="plus" class="w-5 h-5"></i>
+          Nuevo Turno
+        </button>
+      </div>
+
+      <!-- PANEL PRINCIPAL DEL CALENDARIO (Contenedor estilo login) -->
+      <div class="bg-brand-card text-slate-800 rounded-3xl p-6 shadow-2xl flex flex-col flex-1 border border-white/40">
+        
+        <!-- HEADER DEL CALENDARIO (Tabs de vista y Switch Cancelados) -->
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 pb-4 border-b border-slate-300/60">
+          
+          <!-- Tabs de vista -->
+          <div class="inline-flex p-1 bg-slate-200/80 rounded-xl">
+            <button onclick="setView('lista')" id="btn-lista" class="view-btn px-4 py-1.5 rounded-lg text-sm font-medium transition-all text-slate-600">Lista</button>
+            <button onclick="setView('dia')" id="btn-dia" class="view-btn px-4 py-1.5 rounded-lg text-sm font-medium transition-all text-slate-600">Día</button>
+            <button onclick="setView('semana')" id="btn-semana" class="view-btn px-4 py-1.5 rounded-lg text-sm font-medium transition-all text-slate-600">Semana</button>
+            <button onclick="setView('mes')" id="btn-mes" class="view-btn px-4 py-1.5 rounded-lg text-sm font-medium transition-all bg-brand-navy text-white shadow-sm">Mes</button>
+          </div>
+
+          <!-- Switch Mostrar Cancelados -->
+          <label class="flex items-center gap-3 cursor-pointer">
+            <span class="text-sm font-semibold text-slate-600">Cancelados</span>
+            <input type="checkbox" class="sr-only peer">
+            <div class="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-accent relative"></div>
+          </label>
+        </div>
+
+        <!-- CONTENIDO DINÁMICO DEL CALENDARIO -->
+        <div id="calendar-content" class="flex-1 min-h-[400px]">
+          <!-- Se renderiza vía JS según la pestaña seleccionada -->
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- BOTÓN FLOTANTE AYUDA BOT -->
+  <div class="fixed bottom-6 right-6">
+    <button class="bg-brand-navy hover:bg-brand-blue border border-white/20 text-white font-semibold px-5 py-3 rounded-full shadow-2xl flex items-center gap-2 transition-all">
+      <i data-lucide="bot" class="w-5 h-5 text-brand-accent"></i>
+      Ayuda Bot
+    </button>
+  </div>
+
+  <!-- SCRIPT LÓGICA DE VISTAS -->
+  <script>
+    lucide.createIcons();
+
+    function setView(viewName) {
+      // Estilos de botones
+      document.querySelectorAll('.view-btn').forEach(btn => {
+        btn.className = "view-btn px-4 py-1.5 rounded-lg text-sm font-medium transition-all text-slate-600";
+      });
+      const activeBtn = document.getElementById(`btn-${viewName}`);
+      if(activeBtn) {
+        activeBtn.className = "view-btn px-4 py-1.5 rounded-lg text-sm font-medium transition-all bg-brand-navy text-white shadow-sm";
+      }
+
+      // Contenido de cada vista
+      const container = document.getElementById('calendar-content');
+      
+      if(viewName === 'lista') {
+        container.innerHTML = `
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm text-slate-700">
+              <thead class="bg-slate-200/50 uppercase text-xs font-semibold text-slate-500">
+                <tr>
+                  <th class="p-3">Hora</th><th class="p-3">Paciente</th><th class="p-3">Médico</th><th class="p-3">Estado</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-200">
+                <tr><td class="p-3 font-semibold">09:00 AM</td><td class="p-3">Juan Pérez</td><td class="p-3">Dr. Rossi</td><td class="p-3"><span class="px-2 py-1 bg-green-100 text-green-700 rounded-md text-xs font-semibold">Confirmado</span></td></tr>
+                <tr><td class="p-3 font-semibold">10:30 AM</td><td class="p-3">María López</td><td class="p-3">Dra. Gómez</td><td class="p-3"><span class="px-2 py-1 bg-yellow-100 text-yellow-700 rounded-md text-xs font-semibold">Pendiente</span></td></tr>
+              </tbody>
+            </table>
+          </div>`;
+      } else if(viewName === 'dia') {
+        container.innerHTML = `
+          <div class="space-y-3">
+            <h3 class="font-bold text-slate-700 border-b border-slate-300 pb-2">Agenda del Día - 10 de Agosto</h3>
+            <div class="p-3 bg-white rounded-xl border border-slate-200 flex justify-between items-center">
+              <div><p class="font-semibold text-brand-navy">09:00 - 09:30 AM</p><p class="text-xs text-slate-500">Consulta Cardiología - Juan Pérez</p></div>
+              <span class="px-3 py-1 bg-brand-accent/10 text-brand-accent font-semibold rounded-lg text-xs">Atendiendo</span>
+            </div>
+          </div>`;
+      } else if(viewName === 'semana') {
+        container.innerHTML = `
+          <div class="grid grid-cols-5 gap-2 text-center h-full">
+            ['Lun', 'Mar', 'Mié', 'Jue', 'Vie'].map(d => `<div class="bg-slate-200/60 p-2 rounded-xl"><p class="font-bold text-sm text-brand-navy">${d}</p></div>`).join('')
+          </div>`;
+        // Ajuste sencillo para mostrar columnas
+        container.innerHTML = `
+          <div class="grid grid-cols-5 gap-2 h-full text-xs">
+            <div class="bg-slate-200/50 p-2 rounded-xl font-semibold text-slate-600 text-center">Lun 10</div>
+            <div class="bg-slate-200/50 p-2 rounded-xl font-semibold text-slate-600 text-center">Mar 11</div>
+            <div class="bg-slate-200/50 p-2 rounded-xl font-semibold text-slate-600 text-center">Mié 12</div>
+            <div class="bg-slate-200/50 p-2 rounded-xl font-semibold text-slate-600 text-center">Jue 13</div>
+            <div class="bg-slate-200/50 p-2 rounded-xl font-semibold text-slate-600 text-center">Vie 14</div>
+          </div>`;
+      } else if(viewName === 'mes') {
+        container.innerHTML = `
+          <div class="grid grid-cols-7 gap-1 h-full text-center text-xs">
+            <div class="font-bold p-1 text-slate-500">Dom</div><div class="font-bold p-1 text-slate-500">Lun</div><div class="font-bold p-1 text-slate-500">Mar</div><div class="font-bold p-1 text-slate-500">Mié</div><div class="font-bold p-1 text-slate-500">Jue</div><div class="font-bold p-1 text-slate-500">Vie</div><div class="font-bold p-1 text-slate-500">Sáb</div>
+            ${Array.from({length: 31}, (_, i) => `<div class="bg-white/80 p-2 rounded-lg border border-slate-200/60 text-left h-16"><span class="font-semibold text-slate-600">${i+1}</span></div>`).join('')}
+          </div>`;
+      }
+    }
+
+    // Cargar vista inicial
+    setView('mes');
+  </script>
+</body>
+</html>
