@@ -6,7 +6,16 @@ import {
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-const PROTECTED_PREFIXES = ['/usuarios', '/agenda', '/mi-agenda'] as const;
+/**
+ * Prefijos protegidos (alineados a APP_PATHS en lib/navigation).
+ */
+const PROTECTED_PREFIXES = [
+  '/usuarios',
+  '/agenda',
+  '/consultorios',
+  '/pacientes',
+  '/sala-espera',
+] as const;
 
 /**
  * Lee el rol del JWT sin verificar firma (solo para redirect UX).
@@ -46,6 +55,10 @@ export function middleware(request: NextRequest): NextResponse {
   const token = request.cookies.get(AUTH_COOKIE_NAME)?.value;
   const { pathname } = request.nextUrl;
 
+  if (pathname === '/mi-agenda' || pathname.startsWith('/mi-agenda/')) {
+    return NextResponse.redirect(new URL('/agenda', request.url));
+  }
+
   const isProtected = PROTECTED_PREFIXES.some((prefix) =>
     pathname.startsWith(prefix),
   );
@@ -79,8 +92,12 @@ export const config = {
   matcher: [
     '/',
     '/login',
+    '/mi-agenda',
+    '/mi-agenda/:path*',
     '/usuarios/:path*',
     '/agenda/:path*',
-    '/mi-agenda/:path*',
+    '/consultorios/:path*',
+    '/pacientes/:path*',
+    '/sala-espera/:path*',
   ],
 };

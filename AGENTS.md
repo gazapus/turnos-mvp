@@ -30,10 +30,13 @@ turnos-mvp/
 │   ├── web/                      # Next.js (App Router) — Frontend
 │   │   ├── app/
 │   │   │   ├── (auth)/login/
-│   │   │   ├── (admin)/usuarios/
-│   │   │   ├── (recepcion)/agenda/
-│   │   │   ├── (medico)/mi-agenda/
-│   │   │   ├── (publico)/sala-espera/
+│   │   │   ├── (app)/                 # shell autenticado (navbar + sidebar)
+│   │   │   │   ├── agenda/
+│   │   │   │   ├── consultorios/
+│   │   │   │   ├── pacientes/
+│   │   │   │   ├── usuarios/
+│   │   │   │   └── sala-espera/
+│   │   │   ├── (publico)/sala-espera/ # opcional pantalla pública sin shell
 │   │   │   ├── globals.css         # importa tailwind + tokens.css
 │   │   │   └── tokens.css          # design tokens (CSS + @theme)
 │   │   ├── components/
@@ -207,11 +210,13 @@ Route groups definidos para el proyecto (nombres en español, convención tradic
 
 | Ruta                    | Rol                               |
 | :---------------------- | :-------------------------------- |
-| `(auth)/login`          | Autenticación                     |
-| `(admin)/usuarios`      | Administración de usuarios        |
-| `(recepcion)/agenda`    | Gestión de turnos (recepcionista) |
-| `(medico)/mi-agenda`    | Agenda del médico                 |
-| `(publico)/sala-espera` | Pantalla pública de aviso         |
+| `(auth)/login`          | Autenticación                              |
+| `(app)/agenda`          | Agenda unificada (admin / recepción / médico) |
+| `(app)/consultorios`    | Consultorios (admin / recepción)           |
+| `(app)/pacientes`       | Pacientes (admin / recepción)              |
+| `(app)/usuarios`        | Administración de usuarios (admin)         |
+| `(app)/sala-espera`     | Sala de espera dentro del shell            |
+| `(publico)/sala-espera` | Pantalla pública de aviso (sin shell)      |
 
 **Backend (`apps/api`)** — REST en plural, prefijo global `api`:
 
@@ -251,7 +256,7 @@ Todo componente en `app/` o `features/` es **Server Component** a menos que nece
 Colocar `"use client"` **únicamente en el componente interactivo más pequeño posible**, no en páginas enteras ni layouts.
 
 ```tsx
-// app/(recepcion)/agenda/page.tsx — Server Component (sin "use client")
+// app/(app)/agenda/page.tsx — Server Component (sin "use client")
 import { AgendaFilters } from '@/components/agenda/agenda-filters';
 
 export default function AgendaPage() {

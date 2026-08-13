@@ -118,3 +118,20 @@ body {
   background-color: var(--surface);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
 }
+
+/* Glass panels del shell autenticado (wireframe agendapage) */
+.glass-panel {
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur))
+    saturate(var(--glass-saturate));
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+
+/* Sidebar drawer en mobile: casi sólido para legibilidad */
+@media (max-width: 767px) {
+  .glass-panel-sidebar {
+    background: var(--glass-bg-mobile);
+  }
+}

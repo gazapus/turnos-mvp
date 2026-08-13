@@ -60,5 +60,5 @@ export const AUTH_COOKIE_NAME = 'turnos_session' as const;
 export const ROLE_HOME_PATHS = {
   ADMIN: '/usuarios',
   RECEPCIONISTA: '/agenda',
-  MEDICO: '/mi-agenda',
+  MEDICO: '/agenda',
 } as const satisfies Record<AuthRole, string>;

@@ -86,7 +86,9 @@ describe('LoginForm', () => {
       screen.getByRole('button', { name: /ocultar contraseña/i }),
     ).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: /ocultar contraseña/i }));
+    await user.click(
+      screen.getByRole('button', { name: /ocultar contraseña/i }),
+    );
 
     expect(passwordInput).toHaveAttribute('type', 'password');
   });
