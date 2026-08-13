@@ -1,19 +1,44 @@
 /**
  * Design tokens — fuente única de verdad visual para turnos-mvp.
- * Consumir vía utilidades Tailwind generadas por @theme (bg-primary, text-muted-foreground, etc.).
+ * Tema light único (sin dark mode). Consumir vía utilidades Tailwind (@theme).
  */
 
 :root {
+  /* Layout global */
+  --layout-min-width: 320px;
+
   /* Superficies y texto */
   --surface: #ffffff;
+  --surface-elevated: #d3e0ee;
   --foreground: #0f172a;
+  --on-elevated: #1e3a8a;
   --muted: #f1f5f9;
   --muted-foreground: #64748b;
   --border: #e2e8f0;
 
+  /* Brand (navy / overlays de marketing) */
+  --brand: #0b1930;
+  --brand-foreground: #ffffff;
+  --brand-muted: #bfdbfe;
+  --brand-subtle: #93c5fd;
+  --brand-panel-from: rgba(11, 43, 100, 0.75);
+  --brand-panel-mid: rgba(0, 82, 163, 0.65);
+  --brand-panel-to: rgba(6, 52, 99, 0.8);
+  --brand-overlay: rgba(30, 58, 138, 0.7);
+  --brand-shine: rgba(255, 255, 255, 0.1);
+  --brand-border: rgba(255, 255, 255, 0.1);
+  --brand-border-strong: rgba(255, 255, 255, 0.3);
+  --shadow-brand-panel: 0 30px 60px -15px rgba(0, 0, 0, 0.5);
+  --shadow-elevated: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+
   /* Acciones semánticas */
-  --primary: #0f766e;
-  --primary-foreground: #f0fdfa;
+  --primary: #0d9488;
+  --primary-hover: #0f766e;
+  --primary-foreground: #ffffff;
+  --accent: #2dd4bf;
+  --accent-foreground: #042f2e;
+  --accent-soft: rgba(20, 184, 166, 0.2);
+  --link-accent: #0f766e;
   --danger: #dc2626;
   --danger-foreground: #fef2f2;
   --success: #059669;
@@ -21,10 +46,17 @@
   --warning: #d97706;
   --warning-foreground: #fffbeb;
 
+  /* Formularios */
+  --input: #f1f5f9;
+  --input-foreground: #334155;
+  --ring: #14b8a6;
+
   /* Radios */
   --radius-sm: 0.25rem;
   --radius-md: 0.5rem;
   --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1rem;
 
   /* Espaciado (escala corta) */
   --space-1: 0.25rem;
@@ -35,34 +67,35 @@
   --space-8: 2rem;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --surface: #0f172a;
-    --foreground: #f8fafc;
-    --muted: #1e293b;
-    --muted-foreground: #94a3b8;
-    --border: #334155;
-
-    --primary: #14b8a6;
-    --primary-foreground: #042f2e;
-    --danger: #ef4444;
-    --danger-foreground: #450a0a;
-    --success: #10b981;
-    --success-foreground: #022c22;
-    --warning: #f59e0b;
-    --warning-foreground: #451a03;
-  }
-}
-
 @theme {
   /* Colores semánticos → utilidades bg-*, text-*, border-* */
   --color-background: var(--surface);
   --color-foreground: var(--foreground);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-on-elevated: var(--on-elevated);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-border: var(--border);
+
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-brand-muted: var(--brand-muted);
+  --color-brand-subtle: var(--brand-subtle);
+  --color-brand-panel-from: var(--brand-panel-from);
+  --color-brand-panel-mid: var(--brand-panel-mid);
+  --color-brand-panel-to: var(--brand-panel-to);
+  --color-brand-overlay: var(--brand-overlay);
+  --color-brand-shine: var(--brand-shine);
+  --color-brand-border: var(--brand-border);
+  --color-brand-border-strong: var(--brand-border-strong);
+
   --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
   --color-primary-foreground: var(--primary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent-soft: var(--accent-soft);
+  --color-link-accent: var(--link-accent);
   --color-danger: var(--danger);
   --color-danger-foreground: var(--danger-foreground);
   --color-success: var(--success);
@@ -70,8 +103,16 @@
   --color-warning: var(--warning);
   --color-warning-foreground: var(--warning-foreground);
 
-  /* Tipografía — Geist se define en apps/web/app/layout.tsx */
-  --font-sans: var(--font-geist-sans);
+  --color-input: var(--input);
+  --color-input-foreground: var(--input-foreground);
+  --color-ring: var(--ring);
+
+  --shadow-brand-panel: var(--shadow-brand-panel);
+  --shadow-elevated: var(--shadow-elevated);
+
+  /* Tipografía — Inter / Montserrat se definen en apps/web/app/layout.tsx */
+  --font-sans: var(--font-inter);
+  --font-heading: var(--font-montserrat);
   --font-mono: var(--font-geist-mono);
 
   /* Breakpoints — desktop-first; usar max-lg:, max-md:, max-sm: en componentes */
@@ -79,10 +120,12 @@
   --breakpoint-md: 768px;
   --breakpoint-lg: 1024px;
 
-  /* Radios → rounded-sm, rounded-md, rounded-lg */
+  /* Radios → rounded-sm … rounded-2xl */
   --radius-sm: var(--radius-sm);
   --radius-md: var(--radius-md);
   --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+  --radius-2xl: var(--radius-2xl);
 
   /* Espaciado → p-*, m-*, gap-* con escala del tema */
   --spacing-1: var(--space-1);

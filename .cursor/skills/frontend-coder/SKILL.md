@@ -86,6 +86,30 @@ OpenSpec **no es requerido** para estilos ni tokens; basta con AGENTS.md y esta 
 
 Catálogo completo: [references/tokens.md](references/tokens.md).
 
+## Interactividad y cursor
+
+Elementos clickeables deben indicar que son accionables con `cursor-pointer`:
+
+- Botones (`<button>`), enlaces (`<a>`), ítems de menú y controles tipo toggle.
+- En estado deshabilitado usar `disabled:cursor-not-allowed` (o `cursor-not-allowed` si no es un `<button>` nativo).
+
+```tsx
+// ✅ Botón primario
+<button
+  type="submit"
+  className="cursor-pointer bg-primary text-primary-foreground hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
+>
+  Guardar
+</button>
+
+// ❌ Botón sin feedback de cursor
+<button type="submit" className="bg-primary text-primary-foreground">
+  Guardar
+</button>
+```
+
+No aplicar `cursor-pointer` en elementos solo decorativos o de solo lectura.
+
 ## Estructura de archivos
 
 ```text

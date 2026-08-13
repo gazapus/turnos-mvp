@@ -172,3 +172,27 @@ model LlamadoTurno {
   @@index([llamadoEn])
   @@map("llamados_turno")
 }
+
+/// Registro auditable de cada intento de login (éxito o fallo).
+model LoginIntento {
+  id        String   @id @default(uuid())
+  mail      String
+  ip        String
+  exito     Boolean
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([mail, ip, createdAt])
+  @@map("login_intentos")
+}
+
+/// Bloqueo temporal de login por combinación mail + IP.
+model LoginBloqueo {
+  id             String   @id @default(uuid())
+  mail           String
+  ip             String
+  bloqueadoHasta DateTime @map("bloqueado_hasta")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@index([mail, ip, bloqueadoHasta])
+  @@map("login_bloqueos")
+}

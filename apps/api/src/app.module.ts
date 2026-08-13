@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { APP_FILTER } from '@nestjs/core';
 import { LoggerModule } from 'nestjs-pino';
+import { AuthModule } from './auth';
 import { AllExceptionsFilter } from './common';
 import { HealthModule } from './health';
 
@@ -16,6 +17,7 @@ import { HealthModule } from './health';
       },
     }),
     HealthModule,
+    AuthModule,
   ],
   providers: [
     {

@@ -31,12 +31,5 @@
       "prettier --write"
     ]
   },
-  "prettier": "@turnos/config/prettier",
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "@prisma/client",
-      "@prisma/engines",
-      "prisma"
-    ]
-  }
+  "prettier": "@turnos/config/prettier"
 }

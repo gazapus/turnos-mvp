@@ -285,6 +285,14 @@ El sistema se usa principalmente en escritorio (recepción, consultorio). Diseñ
 - Usar variantes `max-lg:`, `max-md:`, `max-sm:` de Tailwind v4 para breakpoints menores.
 - No usar el enfoque mobile-first típico de Tailwind (`sm:`, `md:` como base).
 
+### Ancho mínimo global
+
+La aplicación web define un **piso de layout** de **320px** (`--layout-min-width` en `tokens.css`), aplicado en `body` vía `globals.css`:
+
+- Por debajo de 320px de viewport, el sitio **no comprime** más el contenido: aparece **scroll horizontal** (`overflow-x: auto` en `html`).
+- No fijar `min-width` ad-hoc en páginas o componentes salvo casos excepcionales documentados; usar el token global.
+- 320px es el mínimo estándar web (p. ej. iPhone SE); no implica soporte funcional completo en móvil para pantallas operativas (agenda, admin), que siguen siendo desktop-first.
+
 ### Design tokens y estilos
 
 Fuente única de tokens visuales: [`apps/web/app/tokens.css`](apps/web/app/tokens.css), importado desde [`apps/web/app/globals.css`](apps/web/app/globals.css).
