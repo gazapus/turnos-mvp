@@ -33,7 +33,6 @@ No inventar scopes ni saltar hooks (`--no-verify`) salvo pedido explícito del u
 | `api` | `apps/api` |
 | `db` | `packages/database` |
 | `shared` | `packages/shared-types` |
-| `ui` | `packages/ui` |
 | `config` | `packages/config` |
 
 - Sin scope solo para cambios transversales o docs (p. ej. `docs: actualizar FUNCIONAL.md`).
@@ -92,7 +91,7 @@ EOF
 ## Hooks que debe respetar
 
 - **pre-commit**: ESLint `--fix` + Prettier en `*.{ts,tsx}`; Prettier en `*.{json,md}`.
-- **commit-msg**: valida tipo, formato y `scope-enum` (`web` | `api` | `db` | `shared` | `ui` | `config`).
+- **commit-msg**: valida tipo, formato y `scope-enum` (`web` | `api` | `db` | `shared` | `config`).
 
 ## Qué no hacer
 

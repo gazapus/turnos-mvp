@@ -33,7 +33,9 @@ turnos-mvp/
 │   │   │   ├── (admin)/usuarios/
 │   │   │   ├── (recepcion)/agenda/
 │   │   │   ├── (medico)/mi-agenda/
-│   │   │   └── (publico)/sala-espera/
+│   │   │   ├── (publico)/sala-espera/
+│   │   │   ├── globals.css         # importa tailwind + tokens.css
+│   │   │   └── tokens.css          # design tokens (CSS + @theme)
 │   │   ├── components/
 │   │   └── lib/
 │   │
@@ -55,7 +57,6 @@ turnos-mvp/
 │   ├── database/                 # Prisma: fuente única de tipos y migraciones
 │   │   └── prisma/schema.prisma
 │   ├── shared-types/             # DTOs / contratos web ↔ api
-│   ├── ui/                       # design system compartido (si aplica)
 │   └── config/                   # eslint / tsconfig / bases compartidas
 │
 ├── openspec/                     # Spec-Driven Development (OpenSpec)
@@ -87,7 +88,6 @@ turnos-mvp/
 | **`apps/`**                 | Unidades desplegables (web, API, MCP).                       |
 | **`packages/database`**     | Única fuente de verdad del modelo de datos (Prisma).         |
 | **`packages/shared-types`** | Contratos tipados compartidos entre frontend y backend.      |
-| **`packages/ui`**           | Design system compartido (cuando aplique).                   |
 | **`packages/config`**       | Configuraciones base compartidas (ESLint, TypeScript, etc.). |
 | **`openspec/specs/`**       | Contrato operativo vigente del sistema.                      |
 | **`openspec/changes/`**     | Trabajo en curso: propuesta, tareas y deltas.                |
@@ -186,7 +186,6 @@ Formato: `<tipo>(<scope>): <descripción>`
 | `api`         | Cambios en `apps/api`              |
 | `db`          | Cambios en `packages/database`     |
 | `shared`      | Cambios en `packages/shared-types` |
-| `ui`          | Cambios en `packages/ui`           |
 | `config`      | Cambios en `packages/config`       |
 | _(sin scope)_ | Cambios transversales o en docs    |
 
@@ -285,6 +284,24 @@ El sistema se usa principalmente en escritorio (recepción, consultorio). Diseñ
 - Estilos base (sin prefijo) pensados para ≥1024px.
 - Usar variantes `max-lg:`, `max-md:`, `max-sm:` de Tailwind v4 para breakpoints menores.
 - No usar el enfoque mobile-first típico de Tailwind (`sm:`, `md:` como base).
+
+### Design tokens y estilos
+
+Fuente única de tokens visuales: [`apps/web/app/tokens.css`](apps/web/app/tokens.css), importado desde [`apps/web/app/globals.css`](apps/web/app/globals.css).
+
+- **Prohibido** usar hex, `rgb()` / `hsl()` literales o colores arbitrarios en JSX/TSX (`bg-[#0f766e]`, `text-blue-500` fuera del tema).
+- **Usar** utilidades semánticas del tema: `bg-background`, `text-foreground`, `bg-primary`, `text-muted-foreground`, `border-border`, etc.
+- **Agregar tokens** editando `tokens.css` (`:root` + `@theme`); no inventar valores en componentes.
+- Breakpoints del tema: `sm` 640px, `md` 768px, `lg` 1024px — consumir con `max-lg:`, `max-md:`, `max-sm:` (desktop-first).
+- Para el flujo completo de tareas frontend, consultar la skill de proyecto `frontend-coder` (`.cursor/skills/frontend-coder/SKILL.md`).
+
+```tsx
+// ❌ Prohibido
+<button className="bg-[#0f766e] text-white">Guardar</button>
+
+// ✅ Correcto
+<button className="bg-primary text-primary-foreground">Guardar</button>
+```
 
 ### Formularios
 
@@ -470,15 +487,16 @@ describe('AppointmentsController', () => {
 | Swagger / OpenAPI          | `apps/api`                        | Documentación en `/api/docs`                                   |
 | Zod + React Hook Form      | `apps/web`                        | Validación de formularios (ver `lib/schemas/`)                 |
 | Vitest + RTL               | `apps/web`                        | `pnpm --filter @turnos/web test`                               |
+| Design tokens              | `apps/web/app/tokens.css`         | CSS + `@theme` Tailwind v4; import en `globals.css`            |
 | Jest                       | `apps/api`                        | `pnpm --filter @turnos/api test`                               |
 
 **Scripts raíz:** `pnpm lint`, `pnpm format`, `pnpm format:check`, `pnpm test`, `pnpm build`.
 
 ### Pendientes (changes posteriores)
 
-| Elemento                | Propósito                                                                         |
-| :---------------------- | :-------------------------------------------------------------------------------- |
-| `packages/shared-types` | Contratos tipados compartidos web ↔ api                                           |
-| `packages/ui`           | Design system compartido                                                          |
-| CI/CD (GitHub Actions)  | Lint, test y build en cada PR                                                     |
-| Plugin ESLint de JSDoc  | Validación automática de comentarios (JSDoc sigue siendo obligatorio manualmente) |
+| Elemento                | Propósito                                                                          |
+| :---------------------- | :--------------------------------------------------------------------------------- |
+| `packages/shared-types` | Contratos tipados compartidos web ↔ api                                            |
+| Primitives UI           | Componentes base del design system (Button, Input, etc.) en `apps/web/components/` |
+| CI/CD (GitHub Actions)  | Lint, test y build en cada PR                                                      |
+| Plugin ESLint de JSDoc  | Validación automática de comentarios (JSDoc sigue siendo obligatorio manualmente)  |
