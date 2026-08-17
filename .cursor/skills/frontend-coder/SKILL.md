@@ -21,17 +21,17 @@ Skill de proyecto para implementar UI en `apps/web`.
 
 | Archivo | Rol |
 | :------ | :-- |
-| [`AGENTS.md`](../../AGENTS.md) | Convenciones técnicas del monorepo (§4 web, design tokens) |
+| [`AGENTS.md`](../../AGENTS.md) | Autoridad de estructura, rutas App Router y convenciones web (§2, §3, §4) |
 | [`apps/web/app/tokens.css`](../../apps/web/app/tokens.css) | Tokens visuales — colores, tipografía, breakpoints, radius, spacing |
 | [`docs/FUNCIONAL.md`](../../docs/FUNCIONAL.md) | Requisitos de negocio, roles, casos de uso |
 | [`.cursor/skills/frontend-coder/references/tokens.md`](references/tokens.md) | Catálogo semántico de tokens |
 | Skill `react-doctor` | Auditoría al cerrar cambios de UI |
 
-OpenSpec **no es requerido** para estilos ni tokens; basta con AGENTS.md y esta skill.
+Si esta skill y `AGENTS.md` divergen, **gana `AGENTS.md`**. OpenSpec **no es requerido** para estilos ni tokens.
 
 ## Workflow por tarea frontend
 
-1. **Leer contexto** — `docs/FUNCIONAL.md` para el caso de uso; tokens actuales en `tokens.css`.
+1. **Leer contexto** — `docs/FUNCIONAL.md` para el caso de uso; `AGENTS.md` para rutas y estructura; tokens actuales en `tokens.css`.
 2. **Server Component por defecto** — páginas y layouts sin `"use client"` salvo necesidad real.
 3. **Leaf client** — `"use client"` solo en el componente interactivo más pequeño (formularios, filtros, botones con estado).
 4. **Estilos** — solo utilidades del tema; ver sección Estilos abajo.
@@ -50,10 +50,12 @@ OpenSpec **no es requerido** para estilos ni tokens; basta con AGENTS.md y esta 
 - **Usar:** utilidades semánticas (`bg-primary`, `text-muted-foreground`, `border-border`, `rounded-md`).
 - **No** CSS-in-JS paralelo (Panda, styled-components, etc.); el stack es Tailwind v4 + tokens CSS.
 - **No** tokens por pantalla (`--agenda-header-blue`); solo nombres semánticos reutilizables.
+- Tema **light únicamente** (sin dark mode ni `prefers-color-scheme`).
+- Piso de layout: `--layout-min-width` (320px) en `tokens.css` / `globals.css`. No fijar `min-width` ad-hoc en páginas o componentes.
 
 ### Agregar un token nuevo
 
-1. Definir valor en `:root` (y override en `@media (prefers-color-scheme: dark)` si aplica).
+1. Definir valor en `:root` de `tokens.css`.
 2. Mapear en bloque `@theme` con prefijo Tailwind (`--color-*`, `--radius-*`, etc.).
 3. Consumir vía utilidad en componentes; actualizar [references/tokens.md](references/tokens.md).
 
@@ -110,29 +112,39 @@ Elementos clickeables deben indicar que son accionables con `cursor-pointer`:
 
 No aplicar `cursor-pointer` en elementos solo decorativos o de solo lectura.
 
-## Estructura de archivos
+## Estructura de archivos y rutas
+
+Árbol y route groups: copiar [`AGENTS.md`](../../AGENTS.md) §2 y §3 (Convención de rutas). No inventar grupos por rol.
 
 ```text
 apps/web/
 ├── app/
-│   ├── (auth)/login/
-│   ├── (admin)/usuarios/
-│   ├── (recepcion)/agenda/
-│   ├── (medico)/mi-agenda/
-│   ├── (publico)/sala-espera/
-│   ├── globals.css      # importa tailwind + tokens.css
-│   └── tokens.css       # design tokens
-├── components/          # kebab-case.tsx, PascalCase export
-└── lib/schemas/         # Zod schemas
+│   ├── (auth)/login/              # autenticación
+│   ├── (app)/                     # shell autenticado (navbar + sidebar)
+│   │   ├── agenda/                # unificada (admin / recepción / médico)
+│   │   ├── consultorios/          # admin / recepción
+│   │   ├── pacientes/             # admin / recepción
+│   │   ├── usuarios/              # admin
+│   │   └── sala-espera/           # dentro del shell
+│   ├── (publico)/sala-espera/     # pantalla pública de aviso (sin shell)
+│   ├── globals.css                # importa tailwind + tokens.css
+│   └── tokens.css                 # design tokens (CSS + @theme)
+├── components/                    # kebab-case.tsx, PascalCase export
+└── lib/
+    └── schemas/                   # Zod schemas
 ```
+
+Archivos de ruta: `page.tsx`, `layout.tsx`, `loading.tsx`, `error.tsx`, `route.ts`.
 
 - Archivos: **kebab-case** (`agenda-filters.tsx`).
 - Componentes: **PascalCase** (`AgendaFilters`).
 - Imports absolutos: `@/*` en `apps/web`.
+- Prohibidos paths relativos de más de un nivel (`../../../`).
 
 ## Qué no hacer
 
 - No inventar colores o breakpoints en componentes; extender `tokens.css`.
+- No crear route groups por rol (`(admin)`, `(recepcion)`, `(medico)`); usar `(auth)`, `(app)` y `(publico)`.
 - No poner `"use client"` en páginas enteras ni layouts.
 - No tocar `apps/api` salvo contrato explícito (DTOs en `shared-types`).
 - Primitives genéricos de UI (`Button`, `Input`) van en `apps/web/components/` cuando se necesiten.
