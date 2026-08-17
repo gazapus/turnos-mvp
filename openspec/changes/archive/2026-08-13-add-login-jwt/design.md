@@ -47,21 +47,21 @@ Ver `proposal.md` (Why / What). Estado actual: monorepo con `HealthModule` únic
 
 ### 5. Endpoints mínimos
 
-| Método | Ruta | Auth | Rol |
-| :----- | :--- | :--- | :-- |
-| POST | `/api/auth/login` | pública | setea cookie |
-| POST | `/api/auth/logout` | autenticada (o best-effort clear cookie) | limpia cookie |
-| GET | `/api/auth/me` | autenticada | devuelve usuario de sesión |
+| Método | Ruta               | Auth                                     | Rol                        |
+| :----- | :----------------- | :--------------------------------------- | :------------------------- |
+| POST   | `/api/auth/login`  | pública                                  | setea cookie               |
+| POST   | `/api/auth/logout` | autenticada (o best-effort clear cookie) | limpia cookie              |
+| GET    | `/api/auth/me`     | autenticada                              | devuelve usuario de sesión |
 
 `JwtAuthGuard` exportado desde el módulo para uso futuro.
 
 ### 6. Redirect por rol (stubs)
 
-| Rol | Destino |
-| :-- | :------ |
-| `ADMIN` | `/usuarios` |
-| `RECEPCIONISTA` | `/agenda` |
-| `MEDICO` | `/mi-agenda` |
+| Rol             | Destino      |
+| :-------------- | :----------- |
+| `ADMIN`         | `/usuarios`  |
+| `RECEPCIONISTA` | `/agenda`    |
+| `MEDICO`        | `/mi-agenda` |
 
 Páginas stub mínimas (título + “próximamente”) para no romper el flujo CU1.
 

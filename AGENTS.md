@@ -208,15 +208,15 @@ Ejemplos: `feat(web): pantalla de login`, `fix(api): validación de turno duplic
 
 Route groups definidos para el proyecto (nombres en español, convención tradicional):
 
-| Ruta                    | Rol                               |
-| :---------------------- | :-------------------------------- |
-| `(auth)/login`          | Autenticación                              |
+| Ruta                    | Rol                                           |
+| :---------------------- | :-------------------------------------------- |
+| `(auth)/login`          | Autenticación                                 |
 | `(app)/agenda`          | Agenda unificada (admin / recepción / médico) |
-| `(app)/consultorios`    | Consultorios (admin / recepción)           |
-| `(app)/pacientes`       | Pacientes (admin / recepción)              |
-| `(app)/usuarios`        | Administración de usuarios (admin)         |
-| `(app)/sala-espera`     | Sala de espera dentro del shell            |
-| `(publico)/sala-espera` | Pantalla pública de aviso (sin shell)      |
+| `(app)/consultorios`    | Consultorios (admin / recepción)              |
+| `(app)/pacientes`       | Pacientes (admin / recepción)                 |
+| `(app)/usuarios`        | Administración de usuarios (admin)            |
+| `(app)/sala-espera`     | Sala de espera dentro del shell               |
+| `(publico)/sala-espera` | Pantalla pública de aviso (sin shell)         |
 
 **Backend (`apps/api`)** — REST en plural, prefijo global `api`:
 
@@ -225,6 +225,7 @@ Route groups definidos para el proyecto (nombres en español, convención tradic
 | Turnos             | `/api/turnos`          |
 | Usuarios           | `/api/usuarios`        |
 | Especialidades     | `/api/especialidades`  |
+| Pacientes          | `/api/pacientes`       |
 | Bloqueos de agenda | `/api/bloqueos-agenda` |
 
 No inventar nombres genéricos ni abreviaturas (`/api/data`, `/api/t`, `/api/getTurnos`).

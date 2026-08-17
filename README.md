@@ -32,11 +32,11 @@ pnpm --filter @turnos/database db:seed
 pnpm dev
 ```
 
-| URL | Qué |
-| --- | --- |
-| http://localhost:3000 | Web |
-| http://localhost:3001/api/health | API |
-| http://localhost:3001/api/docs | Swagger |
+| URL                              | Qué     |
+| -------------------------------- | ------- |
+| http://localhost:3000            | Web     |
+| http://localhost:3001/api/health | API     |
+| http://localhost:3001/api/docs   | Swagger |
 
 Usuarios de desarrollo (password `Admin123!@#$`): `admin@clinica.local`, `recepcion@clinica.local`, `medico@clinica.local`.
 

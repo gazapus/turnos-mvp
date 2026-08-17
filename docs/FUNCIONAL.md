@@ -139,16 +139,19 @@ Disponible para todos los usuarios autenticados. Muestra:
 
 ### 7.3 Estados de turno
 
-| Estado     | Transiciones posibles    |
-| ---------- | ------------------------ |
-| Programado | → Confirmado o Cancelado |
-| Confirmado | → Cancelado              |
-| Cancelado  | Terminal — no cambia     |
-| Vencido    | Terminal — no cambia     |
+| Estado     | Transiciones posibles             |
+| ---------- | --------------------------------- |
+| Programado | → Confirmado, Ausente o Cancelado |
+| Confirmado | → Atendido, Ausente o Cancelado   |
+| Atendido   | Terminal — no cambia              |
+| Ausente    | Terminal — no cambia              |
+| Cancelado  | Terminal — no cambia              |
 
 - Al crearse inicia en **Programado**.
 - Pasa a **Confirmado** cuando el recepcionista lo marca al llegar el paciente.
-- Pasa a **Cancelado** por decisión del paciente o del recepcionista (antes de Cancelado/Vencido).
+- Pasa a **Atendido** cuando el médico finaliza la atención (acción futura).
+- Pasa a **Ausente** cuando el paciente no se presenta (disparador pendiente de definición).
+- Pasa a **Cancelado** por decisión del paciente o del recepcionista (antes de estados terminales).
 - **Motivo de cancelación:** texto libre, opcional.
 - Cada estado tiene un **color distinto** en la agenda.
 
@@ -157,11 +160,13 @@ Disponible para todos los usuarios autenticados. Muestra:
 - **Mail:** recordatorio **1 día antes** del turno. Funcional en esta versión.
 - **WhatsApp:** checkbox visible, sin envío real (pendiente definición de proveedor).
 
-### 7.5 Job diario de vencidos
+### 7.5 Job diario de ausentes (pendiente)
 
-- Corre a **medianoche**.
-- Los turnos del día no confirmados pasan a **Vencido**.
-- Opera bajo una **única zona horaria** (single-tenant).
+> **Nota:** El enum vigente reemplazó `VENCIDO` por `ATENDIDO` y `AUSENTE`. La semántica exacta del job nocturno que antes pasaba turnos no confirmados a **Vencido** queda **pendiente de definición** en una futura iteración (¿reemplaza a `AUSENTE`, se elimina o convive con acciones manuales?). No está implementado en esta versión.
+
+- ~~Corre a **medianoche**.~~
+- ~~Los turnos del día no confirmados pasan a **Vencido**.~~
+- Opera bajo una **única zona horaria** (single-tenant) cuando se implemente.
 
 ### 7.6 Concurrencia
 
@@ -307,7 +312,7 @@ Modelo conceptual alineado al schema del sistema:
 | Turno              | Cita con tipo, estado, médico, paciente, especialidad y horarios |
 | Bloqueo de agenda  | Rango de indisponibilidad de un médico                           |
 
-Estados de turno: `PROGRAMADO`, `CONFIRMADO`, `CANCELADO`, `VENCIDO`.  
+Estados de turno: `PROGRAMADO`, `CONFIRMADO`, `ATENDIDO`, `AUSENTE`, `CANCELADO`.  
 Tipos de turno: `PRIMER_TURNO`, `CONTROL`, `SOBRETURNO`, `URGENTE`.
 
 ---

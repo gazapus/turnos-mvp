@@ -78,13 +78,13 @@ En viewports pequeños el sidebar MUST no ocupar columna fija: el sistema SHALL 
 
 El sistema SHALL mostrar en el sidebar únicamente las opciones de menú permitidas para el rol del usuario autenticado. Cada opción MUST navegar a una ruta distinta. La matriz de acceso MUST ser:
 
-| Opción         | Ruta             | Roles                          |
-| -------------- | ---------------- | ------------------------------ |
-| Agenda         | `/agenda`        | ADMIN, RECEPCIONISTA, MEDICO   |
-| Consultorios   | `/consultorios`  | ADMIN, RECEPCIONISTA           |
-| Pacientes      | `/pacientes`     | ADMIN, RECEPCIONISTA           |
-| Usuarios       | `/usuarios`      | ADMIN                          |
-| Sala de espera | `/sala-espera`   | ADMIN, RECEPCIONISTA           |
+| Opción         | Ruta            | Roles                        |
+| -------------- | --------------- | ---------------------------- |
+| Agenda         | `/agenda`       | ADMIN, RECEPCIONISTA, MEDICO |
+| Consultorios   | `/consultorios` | ADMIN, RECEPCIONISTA         |
+| Pacientes      | `/pacientes`    | ADMIN, RECEPCIONISTA         |
+| Usuarios       | `/usuarios`     | ADMIN                        |
+| Sala de espera | `/sala-espera`  | ADMIN, RECEPCIONISTA         |
 
 #### Scenario: Menú de administrador
 

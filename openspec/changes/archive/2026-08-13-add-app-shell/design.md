@@ -31,13 +31,13 @@ Envolver `(admin)`, `(recepcion)` y páginas nuevas bajo un route group con `lay
 
 Constante tipada (p. ej. en `apps/web/lib/navigation/` o `shared-types`) con `{ id, label, href, icon, roles[] }`. El sidebar filtra por `user.rol`.
 
-| Href             | Roles                                      |
-| ---------------- | ------------------------------------------ |
-| `/agenda`        | ADMIN, RECEPCIONISTA, MEDICO               |
-| `/consultorios`  | ADMIN, RECEPCIONISTA                       |
-| `/pacientes`     | ADMIN, RECEPCIONISTA                       |
-| `/usuarios`      | ADMIN                                      |
-| `/sala-espera`   | ADMIN, RECEPCIONISTA                       |
+| Href            | Roles                        |
+| --------------- | ---------------------------- |
+| `/agenda`       | ADMIN, RECEPCIONISTA, MEDICO |
+| `/consultorios` | ADMIN, RECEPCIONISTA         |
+| `/pacientes`    | ADMIN, RECEPCIONISTA         |
+| `/usuarios`     | ADMIN                        |
+| `/sala-espera`  | ADMIN, RECEPCIONISTA         |
 
 ### 3. Unificar agenda; eliminar `/mi-agenda`
 

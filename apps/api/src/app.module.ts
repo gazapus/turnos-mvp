@@ -1,9 +1,13 @@
 import { Module } from '@nestjs/common';
 import { APP_FILTER } from '@nestjs/core';
 import { LoggerModule } from 'nestjs-pino';
+import { AppointmentsModule } from './appointments';
 import { AuthModule } from './auth';
 import { AllExceptionsFilter } from './common';
+import { EspecialidadesModule } from './especialidades';
 import { HealthModule } from './health';
+import { PacientesModule } from './pacientes';
+import { UsersModule } from './users';
 
 @Module({
   imports: [
@@ -18,6 +22,10 @@ import { HealthModule } from './health';
     }),
     HealthModule,
     AuthModule,
+    UsersModule,
+    EspecialidadesModule,
+    PacientesModule,
+    AppointmentsModule,
   ],
   providers: [
     {

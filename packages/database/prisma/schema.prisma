@@ -26,8 +26,9 @@ enum TipoTurno {
 enum EstadoTurno {
   PROGRAMADO
   CONFIRMADO
+  ATENDIDO
+  AUSENTE
   CANCELADO
-  VENCIDO
 }
 
 model Usuario {
