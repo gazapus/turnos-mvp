@@ -4,6 +4,7 @@ import type { DireccionPaginacion } from '@turnos/shared-types';
 import type { JwtPayload } from '../auth';
 import {
   CURSOR_NIL_UUID,
+  clinicDayRangeFromYmd,
   startOfClinicDay,
   UUID_V4_PATTERN,
 } from './appointments.constants';
@@ -14,6 +15,12 @@ import {
 } from './dto';
 
 const PAGE_SIZE = 30;
+
+const TURNO_LIST_INCLUDE = {
+  paciente: { select: { nombre: true, apellido: true } },
+  medico: { select: { nombre: true, apellido: true } },
+  especialidad: { select: { nombre: true } },
+} as const;
 
 type DecodedCursor = {
   fechaInicio: Date;
@@ -44,6 +51,11 @@ export class AppointmentsService {
     user: JwtPayload,
   ): Promise<TurnosListResponseDto> {
     const filters = this.resolveFilters(query, user);
+
+    if (query.fecha) {
+      return this.fetchByDate(filters, query.fecha);
+    }
+
     const direccion = query.direccion ?? 'siguiente';
 
     if (query.cursor) {
@@ -102,11 +114,7 @@ export class AppointmentsService {
 
     const turnos = await prisma.turno.findMany({
       where,
-      include: {
-        paciente: { select: { nombre: true, apellido: true } },
-        medico: { select: { nombre: true, apellido: true } },
-        especialidad: { select: { nombre: true } },
-      },
+      include: TURNO_LIST_INCLUDE,
       orderBy: [{ fechaInicio: 'asc' }, { id: 'asc' }],
       take: PAGE_SIZE,
     });
@@ -115,6 +123,40 @@ export class AppointmentsService {
       fechaInicio: todayStart,
       id: CURSOR_NIL_UUID,
     });
+  }
+
+  /**
+   * Todos los turnos de un día civil, sin paginación por cursor.
+   *
+   * @param filters - Filtros activos (scoping por rol ya resuelto).
+   * @param fecha - Día civil YYYY-MM-DD.
+   * @returns Lista completa del día, sin cursores.
+   */
+  private async fetchByDate(
+    filters: TurnoListFilters,
+    fecha: string,
+  ): Promise<TurnosListResponseDto> {
+    const range = clinicDayRangeFromYmd(fecha);
+    if (!range) {
+      throw new BadRequestException('fecha inválida');
+    }
+
+    const turnos = await prisma.turno.findMany({
+      where: {
+        ...this.buildFilterWhere(filters),
+        fechaInicio: { gte: range.start, lt: range.end },
+      },
+      include: TURNO_LIST_INCLUDE,
+      orderBy: [{ fechaInicio: 'asc' }, { id: 'asc' }],
+    });
+
+    const dto = new TurnosListResponseDto();
+    dto.items = turnos.map((turno) =>
+      TurnoListItemResponseDto.fromEntity(turno),
+    );
+    dto.cursorAnterior = null;
+    dto.cursorSiguiente = null;
+    return dto;
   }
 
   /**
@@ -150,11 +192,7 @@ export class AppointmentsService {
 
       const turnos = await prisma.turno.findMany({
         where,
-        include: {
-          paciente: { select: { nombre: true, apellido: true } },
-          medico: { select: { nombre: true, apellido: true } },
-          especialidad: { select: { nombre: true } },
-        },
+        include: TURNO_LIST_INCLUDE,
         orderBy: [{ fechaInicio: 'asc' }, { id: 'asc' }],
         take: PAGE_SIZE,
       });
@@ -179,11 +217,7 @@ export class AppointmentsService {
 
     const turnosDesc = await prisma.turno.findMany({
       where,
-      include: {
-        paciente: { select: { nombre: true, apellido: true } },
-        medico: { select: { nombre: true, apellido: true } },
-        especialidad: { select: { nombre: true } },
-      },
+      include: TURNO_LIST_INCLUDE,
       orderBy: [{ fechaInicio: 'desc' }, { id: 'desc' }],
       take: PAGE_SIZE,
     });
@@ -358,10 +392,7 @@ export class AppointmentsService {
       if (Number.isNaN(fechaInicio.getTime())) {
         throw new Error('invalid');
       }
-      if (
-        !UUID_V4_PATTERN.test(parsed.id) &&
-        parsed.id !== CURSOR_NIL_UUID
-      ) {
+      if (!UUID_V4_PATTERN.test(parsed.id) && parsed.id !== CURSOR_NIL_UUID) {
         throw new Error('invalid');
       }
       return { fechaInicio, id: parsed.id };

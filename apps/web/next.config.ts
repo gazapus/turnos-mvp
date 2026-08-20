@@ -3,6 +3,12 @@ import type { NextConfig } from 'next';
 const apiOrigin = process.env.API_URL ?? 'http://localhost:3001';
 
 const nextConfig: NextConfig = {
+  transpilePackages: [
+    '@fullcalendar/core',
+    '@fullcalendar/daygrid',
+    '@fullcalendar/react',
+    '@fullcalendar/timegrid',
+  ],
   async rewrites() {
     return [
       {

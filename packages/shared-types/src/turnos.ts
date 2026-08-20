@@ -65,12 +65,14 @@ export type EspecialidadNombreDto = {
 };
 
 /**
- * Ítem de turno para la grilla de agenda (modo Lista).
+ * Ítem de turno para la grilla de agenda (modo Lista y Día).
  */
 export type TurnoListItemDto = {
   id: string;
   fecha: string;
   hora: string;
+  /** Hora local de fin (HH:mm) en zona horaria de clínica. */
+  horaFin: string;
   paciente: PersonaNombreDto;
   medico: PersonaNombreDto;
   especialidad: EspecialidadNombreDto;
@@ -114,6 +116,7 @@ export type TurnosListQuery = {
   incluirCancelados?: boolean;
   cursor?: string;
   direccion?: DireccionPaginacion;
+  fecha?: string;
 };
 
 /**
@@ -134,4 +137,5 @@ export type AgendaUrlParams = {
   especialidadId?: string;
   pacienteId?: string;
   cancelados: boolean;
+  fecha?: string;
 };

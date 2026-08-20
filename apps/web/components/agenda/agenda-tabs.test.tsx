@@ -26,6 +26,7 @@ describe('AgendaTabs', () => {
         params={{
           vista: 'lista',
           cancelados: true,
+          fecha: '2026-08-16',
         }}
       />,
     );
@@ -43,12 +44,34 @@ describe('AgendaTabs', () => {
         params={{
           vista: 'lista',
           cancelados: true,
+          fecha: '2026-08-16',
         }}
       />,
     );
 
     await user.click(screen.getByRole('tab', { name: /día/i }));
 
-    expect(replace).toHaveBeenCalledWith('/agenda?vista=dia&cancelados=true');
+    expect(replace).toHaveBeenCalledWith(
+      '/agenda?vista=dia&cancelados=true&fecha=2026-08-16',
+    );
+  });
+
+  it('conserva fecha al cambiar de tab', async () => {
+    const user = userEvent.setup();
+    render(
+      <AgendaTabs
+        params={{
+          vista: 'dia',
+          cancelados: true,
+          fecha: '2026-08-16',
+        }}
+      />,
+    );
+
+    await user.click(screen.getByRole('tab', { name: /lista/i }));
+
+    expect(replace).toHaveBeenCalledWith(
+      '/agenda?cancelados=true&fecha=2026-08-16',
+    );
   });
 });

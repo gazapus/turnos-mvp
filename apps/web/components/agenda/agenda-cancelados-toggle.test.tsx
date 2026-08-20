@@ -26,6 +26,7 @@ describe('AgendaCanceladosToggle', () => {
         params={{
           vista: 'lista',
           cancelados: true,
+          fecha: '2026-08-16',
         }}
       />,
     );
@@ -40,12 +41,15 @@ describe('AgendaCanceladosToggle', () => {
         params={{
           vista: 'lista',
           cancelados: false,
+          fecha: '2026-08-16',
         }}
       />,
     );
 
     await user.click(screen.getByRole('checkbox'));
 
-    expect(replace).toHaveBeenCalledWith('/agenda?cancelados=true');
+    expect(replace).toHaveBeenCalledWith(
+      '/agenda?cancelados=true&fecha=2026-08-16',
+    );
   });
 });

@@ -5,6 +5,7 @@ import { Plus } from 'lucide-react';
 
 import type { ParsedAgendaParams } from '@/lib/agenda/url-params';
 import { AgendaCanceladosToggle } from './agenda-cancelados-toggle';
+import { AgendaDia } from './agenda-dia';
 import { AgendaFiltrosForm } from './agenda-filtros-form';
 import { AgendaQueryProvider } from './agenda-query-provider';
 import { AgendaTabs } from './agenda-tabs';
@@ -56,7 +57,7 @@ export function AgendaContent({ user, params }: AgendaContentProps) {
             {params.vista === 'lista' && (
               <TurnosListado rol={user.rol} params={params} />
             )}
-            {params.vista === 'dia' && <AgendaVistaPlaceholder vista="dia" />}
+            {params.vista === 'dia' && <AgendaDia params={params} />}
             {params.vista === 'semana' && (
               <AgendaVistaPlaceholder vista="semana" />
             )}

@@ -1,0 +1,88 @@
+@import '@daypicker/react/style.css';
+
+/**
+ * Overrides de FullCalendar y DayPicker para la vista Día.
+ * Excepción documentada: CSS global acotado a selectores de librería,
+ * mapeando únicamente a design tokens (sin hex/rgb arbitrarios).
+ */
+
+.agenda-dia-calendar {
+  --fc-border-color: var(--border);
+  --fc-page-bg-color: transparent;
+  --fc-neutral-bg-color: var(--muted);
+  --fc-today-bg-color: transparent;
+  --fc-now-indicator-color: var(--primary);
+  --fc-event-bg-color: var(--muted);
+  --fc-event-border-color: transparent;
+  --fc-event-text-color: var(--foreground);
+  --fc-list-event-hover-bg-color: transparent;
+  /* No usar height: 100% acá: pisa el alto explícito de Tailwind y
+     colapsa el timegrid (el cuerpo de FC es position:absolute). */
+}
+
+.agenda-dia-calendar .fc,
+.agenda-dia-calendar .fc-view-harness {
+  height: 100%;
+}
+
+.agenda-dia-calendar .fc-scrollgrid,
+.agenda-dia-calendar .fc-scrollgrid-section-header table {
+  border-color: var(--border);
+}
+
+/* Default de FullCalendar: 1.5em. 4.5em previo + 50% → 6.75em. */
+.agenda-dia-calendar .fc .fc-timegrid-slot {
+  height: 6.75em;
+}
+
+/* Quita el margen lateral default de FullCalendar (2px / 2.5%) */
+.agenda-dia-calendar .fc-timegrid-col-events {
+  margin: 0;
+}
+
+.agenda-dia-calendar .fc-timegrid-event-harness {
+  margin: 0;
+}
+
+.agenda-dia-calendar .fc-timegrid-event {
+  margin: 0;
+  border: none;
+  border-radius: var(--radius-md);
+  box-shadow: none;
+}
+
+.agenda-dia-calendar .fc-timegrid-event .fc-event-main {
+  padding: 0;
+  background: transparent;
+  color: inherit;
+}
+
+.agenda-dia-calendar .fc-event {
+  border: none;
+}
+
+.agenda-dia-calendar .fc-turno-PROGRAMADO {
+  background-color: var(--estado-programado-soft);
+}
+
+.agenda-dia-calendar .fc-turno-CONFIRMADO {
+  background-color: var(--estado-confirmado-soft);
+}
+
+.agenda-dia-calendar .fc-turno-ATENDIDO {
+  background-color: var(--estado-atendido-soft);
+}
+
+.agenda-dia-calendar .fc-turno-AUSENTE {
+  background-color: var(--estado-ausente-soft);
+}
+
+.agenda-dia-calendar .fc-turno-CANCELADO {
+  background-color: var(--estado-cancelado-soft);
+}
+
+.agenda-dia-picker.rdp-root {
+  --rdp-accent-color: var(--primary);
+  --rdp-accent-background-color: var(--accent-soft);
+  --rdp-today-color: var(--primary);
+}

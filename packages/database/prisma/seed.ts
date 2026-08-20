@@ -9,6 +9,7 @@
  *   recepcion@clinica.local   → RECEPCIONISTA
  *   medico@clinica.local      → MEDICO (Carlos Médico)
  *   medico2@clinica.local … medico5@clinica.local → MEDICO
+ *   juan.prueba@clinica.local → MEDICO (Juan Prueba, turnos curados)
  */
 import {
   EstadoTurno,
@@ -70,6 +71,13 @@ const DEV_USERS = [
     nombre: 'Diego',
     apellido: 'Ruiz',
     mail: 'medico5@clinica.local',
+    rol: RolUsuario.MEDICO,
+  },
+  {
+    documentoIdentidad: '10000007',
+    nombre: 'Juan',
+    apellido: 'Prueba',
+    mail: 'juan.prueba@clinica.local',
     rol: RolUsuario.MEDICO,
   },
 ] as const;
@@ -144,6 +152,7 @@ const PACIENTES = [
 
 const ESTADOS = Object.values(EstadoTurno);
 const TIPOS = Object.values(TipoTurno);
+const JUAN_PRUEBA_MAIL = 'juan.prueba@clinica.local';
 
 /**
  * Inicio del día local para una fecha dada.
@@ -262,6 +271,112 @@ function buildTurnosPorDia(params: {
   return turnos;
 }
 
+type TurnoSeedRow = ReturnType<typeof buildTurnosPorDia>[number] & {
+  motivoCancelacion?: string;
+};
+
+/**
+ * Turnos de demostración para Juan Prueba: no consecutivos, distinta
+ * duración, paciente, estado y tipo. Hoy 2 turnos; mañana 3 espaciados.
+ *
+ * @param params - Médico, pacientes, especialidad y creador.
+ * @returns Filas listas para `createMany`.
+ */
+function buildTurnosJuanPrueba(params: {
+  medicoId: string;
+  pacientes: Array<{ id: string }>;
+  especialidadId: string;
+  creadoPorId: string;
+}): TurnoSeedRow[] {
+  const { medicoId, pacientes, especialidadId, creadoPorId } = params;
+  const today = startOfDay(new Date());
+  const tomorrow = addDays(today, 1);
+
+  const slots: Array<{
+    day: Date;
+    hour: number;
+    minute: number;
+    durationMin: number;
+    pacienteIdx: number;
+    tipo: TipoTurno;
+    estado: EstadoTurno;
+    motivoCancelacion?: string;
+  }> = [
+    {
+      day: today,
+      hour: 9,
+      minute: 0,
+      durationMin: 30,
+      pacienteIdx: 0,
+      tipo: TipoTurno.PRIMER_TURNO,
+      estado: EstadoTurno.ATENDIDO,
+    },
+    {
+      day: today,
+      hour: 14,
+      minute: 0,
+      durationMin: 45,
+      pacienteIdx: 1,
+      tipo: TipoTurno.URGENTE,
+      estado: EstadoTurno.AUSENTE,
+    },
+    {
+      day: tomorrow,
+      hour: 8,
+      minute: 0,
+      durationMin: 20,
+      pacienteIdx: 2,
+      tipo: TipoTurno.CONTROL,
+      estado: EstadoTurno.PROGRAMADO,
+    },
+    {
+      day: tomorrow,
+      hour: 11,
+      minute: 30,
+      durationMin: 60,
+      pacienteIdx: 3,
+      tipo: TipoTurno.SOBRETURNO,
+      estado: EstadoTurno.CONFIRMADO,
+    },
+    {
+      day: tomorrow,
+      hour: 16,
+      minute: 0,
+      durationMin: 90,
+      pacienteIdx: 4,
+      tipo: TipoTurno.PRIMER_TURNO,
+      estado: EstadoTurno.CANCELADO,
+      motivoCancelacion: 'Paciente reprogramó',
+    },
+  ];
+
+  return slots.map((slot) => {
+    const paciente = pacientes[slot.pacienteIdx];
+    if (!paciente) {
+      throw new Error(
+        `Paciente de seed faltante en índice ${slot.pacienteIdx}`,
+      );
+    }
+
+    const fechaInicio = new Date(slot.day);
+    fechaInicio.setHours(slot.hour, slot.minute, 0, 0);
+    const fechaFin = new Date(fechaInicio);
+    fechaFin.setMinutes(fechaFin.getMinutes() + slot.durationMin);
+
+    return {
+      pacienteId: paciente.id,
+      medicoId,
+      especialidadId,
+      creadoPorId,
+      fechaInicio,
+      fechaFin,
+      tipo: slot.tipo,
+      estado: slot.estado,
+      motivoCancelacion: slot.motivoCancelacion,
+    };
+  });
+}
+
 async function main(): Promise<void> {
   const passwordHash = await argon2.hash(DEV_PASSWORD);
 
@@ -296,6 +411,17 @@ async function main(): Promise<void> {
       prisma.usuario.findUniqueOrThrow({ where: { mail: u.mail } }),
     ),
   );
+
+  const medicoJuanPrueba = medicos.find(
+    (medico) => medico.mail === JUAN_PRUEBA_MAIL,
+  );
+  const medicosAgendaMasiva = medicos.filter(
+    (medico) => medico.mail !== JUAN_PRUEBA_MAIL,
+  );
+
+  if (!medicoJuanPrueba) {
+    throw new Error(`No se encontró el médico ${JUAN_PRUEBA_MAIL}`);
+  }
 
   const especialidades = await Promise.all(
     ESPECIALIDADES.map((esp) =>
@@ -358,12 +484,27 @@ async function main(): Promise<void> {
 
   await prisma.turno.deleteMany({});
 
-  const turnosData = buildTurnosPorDia({
-    medicos,
+  const especialidadJuan = especialidades[0];
+  if (!especialidadJuan) {
+    throw new Error('No hay especialidades para asignar a Juan Prueba');
+  }
+
+  const turnosJuanPrueba = buildTurnosJuanPrueba({
+    medicoId: medicoJuanPrueba.id,
     pacientes,
-    especialidades,
+    especialidadId: especialidadJuan.id,
     creadoPorId: recepcion.id,
   });
+
+  const turnosData = [
+    ...buildTurnosPorDia({
+      medicos: medicosAgendaMasiva,
+      pacientes,
+      especialidades,
+      creadoPorId: recepcion.id,
+    }),
+    ...turnosJuanPrueba,
+  ];
 
   await prisma.turno.createMany({ data: turnosData });
 
@@ -386,7 +527,8 @@ async function main(): Promise<void> {
     `Seed OK: ${DEV_USERS.map((u) => `${u.mail} (${u.rol})`).join(', ')} | ` +
       `${counts.medicos} médicos, ${counts.especialidades} especialidades, ` +
       `${counts.pacientes} pacientes, ${counts.turnos} turnos ` +
-      `(${counts.turnosPorDia}/día × ${counts.dias} días hasta fin de agosto)`,
+      `(${counts.turnosPorDia}/día × ${counts.dias} días hasta fin de agosto) | ` +
+      `Juan Prueba: ${turnosJuanPrueba.length} turnos curados`,
   );
 }
 

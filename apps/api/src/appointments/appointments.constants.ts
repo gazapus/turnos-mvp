@@ -16,6 +16,11 @@ export const UUID_V4_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 /**
+ * Fecha civil YYYY-MM-DD.
+ */
+export const YMD_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+/**
  * Inicio del día civil en la zona horaria de la clínica.
  *
  * @param date - Instante de referencia (default: ahora).
@@ -34,7 +39,9 @@ export function startOfClinicDay(date: Date = new Date()): Date {
   const day = parts.find((p) => p.type === 'day')?.value;
 
   if (!year || !month || !day) {
-    throw new Error('No se pudo resolver la fecha en la zona horaria de la clínica');
+    throw new Error(
+      'No se pudo resolver la fecha en la zona horaria de la clínica',
+    );
   }
 
   const noonUtc = new Date(`${year}-${month}-${day}T12:00:00.000Z`);
@@ -90,4 +97,53 @@ export function formatClinicTime(date: Date): string {
     minute: '2-digit',
     hour12: false,
   }).format(date);
+}
+
+/**
+ * Valida una fecha civil YYYY-MM-DD (calendario gregoriano).
+ *
+ * @param ymd - Cadena YYYY-MM-DD.
+ * @returns true si es una fecha real.
+ */
+export function isValidYmd(ymd: string): boolean {
+  const match = YMD_PATTERN.exec(ymd);
+  if (!match) {
+    return false;
+  }
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const utc = new Date(Date.UTC(year, month - 1, day));
+  return (
+    utc.getUTCFullYear() === year &&
+    utc.getUTCMonth() === month - 1 &&
+    utc.getUTCDate() === day
+  );
+}
+
+/**
+ * Rango `[inicio, fin)` del día civil en la zona horaria de la clínica.
+ *
+ * @param ymd - Fecha YYYY-MM-DD.
+ * @returns Inicio inclusive y fin exclusivo, o null si la fecha es inválida.
+ */
+export function clinicDayRangeFromYmd(
+  ymd: string,
+): { start: Date; end: Date } | null {
+  if (!isValidYmd(ymd)) {
+    return null;
+  }
+  const match = YMD_PATTERN.exec(ymd);
+  if (!match) {
+    return null;
+  }
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const noon = new Date(Date.UTC(year, month - 1, day, 12, 0, 0, 0));
+  const nextNoon = new Date(Date.UTC(year, month - 1, day + 1, 12, 0, 0, 0));
+  return {
+    start: startOfClinicDay(noon),
+    end: startOfClinicDay(nextNoon),
+  };
 }

@@ -18,12 +18,10 @@ import {
   IsOptional,
   IsString,
   IsUUID,
+  Matches,
 } from 'class-validator';
 import type { Turno } from '@turnos/database';
-import {
-  formatClinicDate,
-  formatClinicTime,
-} from '../appointments.constants';
+import { formatClinicDate, formatClinicTime } from '../appointments.constants';
 
 type TurnoWithRelations = Turno & {
   paciente: { nombre: string; apellido: string };
@@ -74,6 +72,18 @@ export class ListTurnosQueryDto {
   @IsOptional()
   @IsEnum(DIRECCION_PAGINACION)
   direccion?: DireccionPaginacion;
+
+  @ApiPropertyOptional({
+    example: '2026-08-16',
+    description:
+      'Día civil YYYY-MM-DD. Si está presente, se ignoran cursor/dirección y no se pagina',
+  })
+  @IsOptional()
+  @IsString()
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, {
+    message: 'fecha debe tener formato YYYY-MM-DD',
+  })
+  fecha?: string;
 }
 
 /**
@@ -108,6 +118,12 @@ export class TurnoListItemResponseDto implements TurnoListItemDto {
   @ApiProperty({ example: '09:30', description: 'Hora local HH:mm' })
   hora!: string;
 
+  @ApiProperty({
+    example: '10:00',
+    description: 'Hora local de fin HH:mm',
+  })
+  horaFin!: string;
+
   @ApiProperty({ type: PersonaNombreResponseDto })
   paciente!: PersonaNombreResponseDto;
 
@@ -134,6 +150,7 @@ export class TurnoListItemResponseDto implements TurnoListItemDto {
     dto.id = turno.id;
     dto.fecha = formatClinicDate(turno.fechaInicio);
     dto.hora = formatClinicTime(turno.fechaInicio);
+    dto.horaFin = formatClinicTime(turno.fechaFin);
     dto.paciente = {
       nombre: turno.paciente.nombre,
       apellido: turno.paciente.apellido,

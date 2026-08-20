@@ -27,4 +27,13 @@ describe('TurnoTipoIcon', () => {
     render(<TurnoTipoIcon tipo="URGENTE" />);
     expect(screen.getByLabelText(TIPO_TOOLTIPS.URGENTE)).toBeInTheDocument();
   });
+
+  it('usa el tamaño reducido de la vista Día cuando size es sm', () => {
+    const { container } = render(
+      <TurnoTipoIcon tipo="PRIMER_TURNO" size="sm" />,
+    );
+    const img = container.querySelector('img');
+    expect(img).toHaveAttribute('width', '22');
+    expect(img).toHaveAttribute('height', '22');
+  });
 });

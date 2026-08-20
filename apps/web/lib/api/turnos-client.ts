@@ -87,6 +87,7 @@ export function fetchTurnos(
     incluirCancelados: query.incluirCancelados ?? true,
     cursor: query.cursor,
     direccion: query.direccion,
+    fecha: query.fecha,
   });
   return apiFetch<TurnosListResponse>(`/api/turnos${qs}`);
 }

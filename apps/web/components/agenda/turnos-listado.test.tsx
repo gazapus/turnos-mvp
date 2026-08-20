@@ -33,6 +33,7 @@ describe('TurnosListado', () => {
           id: 't1',
           fecha: '2026-08-16',
           hora: '09:00',
+          horaFin: '09:30',
           paciente: { nombre: 'María', apellido: 'González' },
           medico: { nombre: 'Carlos', apellido: 'Médico' },
           especialidad: { nombre: 'Cardiología' },
@@ -43,6 +44,7 @@ describe('TurnosListado', () => {
           id: 't2',
           fecha: '2026-08-16',
           hora: '09:30',
+          horaFin: '10:00',
           paciente: { nombre: 'Ana', apellido: 'López' },
           medico: { nombre: 'Laura', apellido: 'Gómez' },
           especialidad: { nombre: 'Clínica Médica' },
@@ -57,7 +59,7 @@ describe('TurnosListado', () => {
     renderWithQuery(
       <TurnosListado
         rol="RECEPCIONISTA"
-        params={{ vista: 'lista', cancelados: true }}
+        params={{ vista: 'lista', cancelados: true, fecha: '2026-08-16' }}
       />,
     );
 
@@ -74,6 +76,7 @@ describe('TurnosListado', () => {
           id: 't1',
           fecha: '2026-08-16',
           hora: '09:00',
+          horaFin: '09:30',
           paciente: { nombre: 'María', apellido: 'González' },
           medico: { nombre: 'Carlos', apellido: 'Médico' },
           especialidad: { nombre: 'Cardiología' },
@@ -84,6 +87,7 @@ describe('TurnosListado', () => {
           id: 't2',
           fecha: '2026-08-16',
           hora: '09:30',
+          horaFin: '10:00',
           paciente: { nombre: 'Ana', apellido: 'López' },
           medico: { nombre: 'Laura', apellido: 'Gómez' },
           especialidad: { nombre: 'Clínica Médica' },
@@ -98,7 +102,7 @@ describe('TurnosListado', () => {
     renderWithQuery(
       <TurnosListado
         rol="RECEPCIONISTA"
-        params={{ vista: 'lista', cancelados: false }}
+        params={{ vista: 'lista', cancelados: false, fecha: '2026-08-16' }}
       />,
     );
 
@@ -114,6 +118,7 @@ describe('TurnosListado', () => {
             id: 't-cancelado',
             fecha: '2026-08-16',
             hora: '09:30',
+            horaFin: '10:00',
             paciente: { nombre: 'Ana', apellido: 'López' },
             medico: { nombre: 'Laura', apellido: 'Gómez' },
             especialidad: { nombre: 'Clínica Médica' },
@@ -130,6 +135,7 @@ describe('TurnosListado', () => {
             id: 't-programado',
             fecha: '2026-08-16',
             hora: '10:00',
+            horaFin: '10:30',
             paciente: { nombre: 'María', apellido: 'González' },
             medico: { nombre: 'Carlos', apellido: 'Médico' },
             especialidad: { nombre: 'Cardiología' },
@@ -144,7 +150,7 @@ describe('TurnosListado', () => {
     renderWithQuery(
       <TurnosListado
         rol="RECEPCIONISTA"
-        params={{ vista: 'lista', cancelados: false }}
+        params={{ vista: 'lista', cancelados: false, fecha: '2026-08-16' }}
       />,
     );
 

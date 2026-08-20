@@ -28,6 +28,7 @@ describe('serializeAgendaUrlParams', () => {
     const search = serializeAgendaUrlParams({
       vista: 'lista',
       cancelados: true,
+      fecha: '2026-08-16',
     });
 
     expect(search.get('cancelados')).toBe('true');
@@ -37,6 +38,7 @@ describe('serializeAgendaUrlParams', () => {
     const search = serializeAgendaUrlParams({
       vista: 'lista',
       cancelados: false,
+      fecha: '2026-08-16',
     });
 
     expect(search.get('cancelados')).toBe('false');
@@ -45,18 +47,21 @@ describe('serializeAgendaUrlParams', () => {
 
 describe('parseAgendaUrlParams', () => {
   it('aplica default por rol cuando cancelados no está en la URL', () => {
-    expect(
-      parseAgendaUrlParams({}, adminUser).cancelados,
-    ).toBe(defaultCanceladosForRole('ADMIN'));
-    expect(
-      parseAgendaUrlParams({}, medicoUser).cancelados,
-    ).toBe(defaultCanceladosForRole('MEDICO'));
+    expect(parseAgendaUrlParams({}, adminUser).cancelados).toBe(
+      defaultCanceladosForRole('ADMIN'),
+    );
+    expect(parseAgendaUrlParams({}, medicoUser).cancelados).toBe(
+      defaultCanceladosForRole('MEDICO'),
+    );
   });
 
-  it('respeta cancelados=false explícito en la URL', () => {
-    expect(
-      parseAgendaUrlParams({ cancelados: 'false' }, adminUser).cancelados,
-    ).toBe(false);
+  it('hidrata fecha desde la URL y defaulta a hoy si falta', () => {
+    expect(parseAgendaUrlParams({ fecha: '2026-08-16' }, adminUser).fecha).toBe(
+      '2026-08-16',
+    );
+    expect(parseAgendaUrlParams({}, adminUser).fecha).toMatch(
+      /^\d{4}-\d{2}-\d{2}$/,
+    );
   });
 });
 
@@ -65,6 +70,7 @@ describe('cancelados round-trip', () => {
     const serialized = serializeAgendaUrlParams({
       vista: 'lista',
       cancelados: false,
+      fecha: '2026-08-16',
     });
 
     const record = Object.fromEntries(serialized.entries());

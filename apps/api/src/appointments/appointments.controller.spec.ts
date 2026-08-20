@@ -10,6 +10,16 @@ import { startOfClinicDay } from './appointments.constants';
 const mockFindMany = jest.fn();
 const mockCount = jest.fn();
 
+/**
+ * Primer argumento de la última invocación a prisma.turno.findMany.
+ *
+ * @returns Argumento tipado o undefined.
+ */
+function firstFindManyArg<T>(): T | undefined {
+  const calls = mockFindMany.mock.calls as Array<[T]>;
+  return calls[0]?.[0];
+}
+
 jest.mock('@turnos/database', () => ({
   prisma: {
     turno: {
@@ -69,9 +79,9 @@ describe('AppointmentsService', () => {
       { sub: 'admin', mail: 'a@b.c', rol: 'ADMIN' },
     );
 
-    const callArg = mockFindMany.mock.calls[0]?.[0] as
-      | { where?: { fechaInicio?: { gte?: Date } } }
-      | undefined;
+    const callArg = firstFindManyArg<{
+      where?: { fechaInicio?: { gte?: Date } };
+    }>();
     const gte = callArg?.where?.fechaInicio?.gte;
     expect(gte).toBeInstanceOf(Date);
     expect(gte?.getTime()).toBe(startOfClinicDay(new Date()).getTime());
@@ -155,6 +165,117 @@ describe('AppointmentsService', () => {
     );
     expect(result.items[0]?.id).toBe('t2');
   });
+
+  it('consulta por fecha devuelve todos los turnos del día sin paginar', async () => {
+    mockFindMany.mockResolvedValue([
+      {
+        id: 't1',
+        fechaInicio: new Date('2026-08-16T12:00:00.000Z'),
+        fechaFin: new Date('2026-08-16T12:30:00.000Z'),
+        estado: EstadoTurno.PROGRAMADO,
+        tipo: 'CONTROL',
+        paciente: { nombre: 'A', apellido: 'B' },
+        medico: { nombre: 'C', apellido: 'D' },
+        especialidad: { nombre: 'Cardiología' },
+      },
+      {
+        id: 't2',
+        fechaInicio: new Date('2026-08-16T15:00:00.000Z'),
+        fechaFin: new Date('2026-08-16T15:30:00.000Z'),
+        estado: EstadoTurno.PROGRAMADO,
+        tipo: 'CONTROL',
+        paciente: { nombre: 'E', apellido: 'F' },
+        medico: { nombre: 'G', apellido: 'H' },
+        especialidad: { nombre: 'Cardiología' },
+      },
+    ]);
+
+    const result = await service.listTurnos(
+      { fecha: '2026-08-16', incluirCancelados: true },
+      { sub: 'admin', mail: 'a@b.c', rol: 'ADMIN' },
+    );
+
+    expect(mockFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          fechaInicio: expect.objectContaining({
+            gte: expect.any(Date) as Date,
+            lt: expect.any(Date) as Date,
+          }) as Record<string, unknown>,
+        }) as Record<string, unknown>,
+      }),
+    );
+    const callArg = firstFindManyArg<{ take?: number }>();
+    expect(callArg?.take).toBeUndefined();
+    expect(result.items).toHaveLength(2);
+    expect(result.cursorAnterior).toBeNull();
+    expect(result.cursorSiguiente).toBeNull();
+    expect(result.items[0]?.horaFin).toBeDefined();
+  });
+
+  it('ignora cursor cuando fecha está presente', async () => {
+    mockFindMany.mockResolvedValue([]);
+    const cursor = service.encodeCursor(
+      new Date('2026-08-10T10:00:00.000Z'),
+      'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+    );
+
+    await service.listTurnos(
+      {
+        fecha: '2026-08-16',
+        cursor,
+        direccion: 'siguiente',
+        incluirCancelados: true,
+      },
+      { sub: 'admin', mail: 'a@b.c', rol: 'ADMIN' },
+    );
+
+    expect(mockFindMany).toHaveBeenCalledTimes(1);
+    const callArg = firstFindManyArg<{
+      where?: { fechaInicio?: { gte?: Date; lt?: Date } };
+    }>();
+    expect(callArg.where?.fechaInicio?.gte).toBeInstanceOf(Date);
+    expect(callArg.where?.fechaInicio?.lt).toBeInstanceOf(Date);
+  });
+
+  it('consulta por fecha fuerza medicoId del JWT cuando el rol es MEDICO', async () => {
+    mockFindMany.mockResolvedValue([]);
+
+    await service.listTurnos(
+      { fecha: '2026-08-16', medicoId: 'otro-id', incluirCancelados: true },
+      { sub: 'medico-propio', mail: 'm@x.c', rol: RolUsuario.MEDICO },
+    );
+
+    expect(mockFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          medicoId: 'medico-propio',
+        }) as Record<string, unknown>,
+      }),
+    );
+  });
+
+  it('consulta por fecha sin turnos devuelve lista vacía', async () => {
+    mockFindMany.mockResolvedValue([]);
+
+    const result = await service.listTurnos(
+      { fecha: '2026-08-16', incluirCancelados: true },
+      { sub: 'admin', mail: 'a@b.c', rol: 'ADMIN' },
+    );
+
+    expect(result.items).toEqual([]);
+    expect(result.cursorAnterior).toBeNull();
+    expect(result.cursorSiguiente).toBeNull();
+  });
+
+  it('rechaza fecha inválida', async () => {
+    await expect(
+      service.listTurnos(
+        { fecha: '2026-13-40', incluirCancelados: true },
+        { sub: 'admin', mail: 'a@b.c', rol: 'ADMIN' },
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
 });
 
 describe('AppointmentsController', () => {
@@ -189,6 +310,7 @@ describe('AppointmentsController', () => {
           especialidad: { nombre: 'Cardiología' },
           estado: 'PROGRAMADO',
           tipo: 'PRIMER_TURNO',
+          horaFin: '09:30',
         },
       ],
       cursorSiguiente: null,

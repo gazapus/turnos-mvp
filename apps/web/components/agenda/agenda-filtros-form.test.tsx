@@ -49,14 +49,15 @@ describe('AgendaFiltrosForm', () => {
         params={{
           vista: 'lista',
           cancelados: true,
+          fecha: '2026-08-16',
         }}
       />,
     );
 
     expect(await screen.findByLabelText(/^médico$/i)).toBeInTheDocument();
-    expect(screen.getAllByRole('option', { name: /todos/i }).length).toBeGreaterThan(
-      0,
-    );
+    expect(
+      screen.getAllByRole('option', { name: /todos/i }).length,
+    ).toBeGreaterThan(0);
   });
 
   it('deshabilita médico para rol MEDICO', async () => {
@@ -67,6 +68,7 @@ describe('AgendaFiltrosForm', () => {
           vista: 'lista',
           medicoId: 'm1',
           cancelados: false,
+          fecha: '2026-08-16',
         }}
       />,
     );
@@ -82,6 +84,7 @@ describe('AgendaFiltrosForm', () => {
         params={{
           vista: 'lista',
           cancelados: true,
+          fecha: '2026-08-16',
         }}
       />,
     );
@@ -96,7 +99,9 @@ describe('AgendaFiltrosForm', () => {
     await user.click(screen.getByRole('button', { name: /aplicar/i }));
 
     await waitFor(() => {
-      expect(replace).toHaveBeenCalledWith('/agenda?medicoId=m1&cancelados=true');
+      expect(replace).toHaveBeenCalledWith(
+        '/agenda?medicoId=m1&cancelados=true&fecha=2026-08-16',
+      );
     });
   });
 });

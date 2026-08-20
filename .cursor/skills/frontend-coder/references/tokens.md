@@ -43,6 +43,11 @@ Actualizar este archivo cuando se agreguen tokens en `tokens.css`.
 | `--success-foreground` | `text-success-foreground` | Texto sobre success |
 | `--warning` | `bg-warning`, `text-warning` | Advertencias |
 | `--warning-foreground` | `text-warning-foreground` | Texto sobre warning |
+| `--estado-programado-soft` | `bg-estado-programado-soft` | Fondo claro de card Programado (vista Día) |
+| `--estado-confirmado-soft` | `bg-estado-confirmado-soft` | Fondo claro de card Confirmado (vista Día) |
+| `--estado-atendido-soft` | `bg-estado-atendido-soft` | Fondo claro de card Atendido (vista Día) |
+| `--estado-ausente-soft` | `bg-estado-ausente-soft` | Fondo claro de card Ausente (vista Día) |
+| `--estado-cancelado-soft` | `bg-estado-cancelado-soft` | Fondo claro de card Cancelado (vista Día) |
 
 ## Tipografía
 

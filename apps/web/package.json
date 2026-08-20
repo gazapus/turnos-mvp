@@ -13,6 +13,11 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@daypicker/react": "^10.0.1",
+    "@fullcalendar/core": "6.1.21",
+    "@fullcalendar/daygrid": "6.1.21",
+    "@fullcalendar/react": "6.1.21",
+    "@fullcalendar/timegrid": "6.1.21",
     "@hookform/resolvers": "^5.7.1",
     "@tanstack/react-query": "^5.90.12",
     "@turnos/shared-types": "workspace:*",

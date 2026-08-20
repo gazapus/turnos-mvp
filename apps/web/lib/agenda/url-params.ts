@@ -1,3 +1,4 @@
+import { isValidYmd, todayYmd } from '@/lib/agenda/fecha-dia';
 import type {
   AuthUser,
   EspecialidadOption,
@@ -17,6 +18,7 @@ export type ParsedAgendaParams = {
   especialidadId?: string;
   pacienteId?: string;
   cancelados: boolean;
+  fecha: string;
 };
 
 const ALL_VALUE = '';
@@ -74,6 +76,8 @@ export function parseAgendaUrlParams(
 
   const especialidadId = firstParam(searchParams.especialidadId);
   const pacienteId = firstParam(searchParams.pacienteId);
+  const fechaRaw = firstParam(searchParams.fecha);
+  const fecha = fechaRaw && isValidYmd(fechaRaw) ? fechaRaw : todayYmd();
 
   return {
     vista,
@@ -81,6 +85,7 @@ export function parseAgendaUrlParams(
     especialidadId: especialidadId || undefined,
     pacienteId: pacienteId || undefined,
     cancelados,
+    fecha,
   };
 }
 
@@ -108,6 +113,9 @@ export function serializeAgendaUrlParams(
     search.set('pacienteId', params.pacienteId);
   }
   search.set('cancelados', params.cancelados ? 'true' : 'false');
+  if (params.fecha) {
+    search.set('fecha', params.fecha);
+  }
 
   return search;
 }
@@ -166,6 +174,7 @@ export function toTurnosListQuery(
   filters: AppliedAgendaFilters,
   cursor?: string,
   direccion?: TurnosListQuery['direccion'],
+  fecha?: string,
 ): TurnosListQuery {
   return {
     medicoId: filters.medicoId,
@@ -174,6 +183,7 @@ export function toTurnosListQuery(
     incluirCancelados: true,
     cursor,
     direccion,
+    fecha,
   };
 }
 

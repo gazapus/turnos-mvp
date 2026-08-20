@@ -46,6 +46,13 @@
   --warning: #d97706;
   --warning-foreground: #fffbeb;
 
+  /* Fondos suaves de card por estado de turno (vista Día) */
+  --estado-programado-soft: rgba(147, 197, 253, 0.28);
+  --estado-confirmado-soft: rgba(5, 150, 105, 0.16);
+  --estado-atendido-soft: rgba(20, 184, 166, 0.16);
+  --estado-ausente-soft: rgba(100, 116, 139, 0.12);
+  --estado-cancelado-soft: rgba(220, 38, 38, 0.14);
+
   /* Formularios */
   --input: #f1f5f9;
   --input-foreground: #334155;
@@ -121,6 +128,12 @@
   --color-success-foreground: var(--success-foreground);
   --color-warning: var(--warning);
   --color-warning-foreground: var(--warning-foreground);
+
+  --color-estado-programado-soft: var(--estado-programado-soft);
+  --color-estado-confirmado-soft: var(--estado-confirmado-soft);
+  --color-estado-atendido-soft: var(--estado-atendido-soft);
+  --color-estado-ausente-soft: var(--estado-ausente-soft);
+  --color-estado-cancelado-soft: var(--estado-cancelado-soft);
 
   --color-input: var(--input);
   --color-input-foreground: var(--input-foreground);
