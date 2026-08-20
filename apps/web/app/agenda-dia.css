@@ -86,3 +86,35 @@
   --rdp-accent-background-color: var(--accent-soft);
   --rdp-today-color: var(--primary);
 }
+
+/**
+ * Piso de ancho del panel Día. Excepción alineada a Lista
+ * (`min-w-[960px]` en `turnos-listado.tsx`; ver AGENTS.md / frontend-coder).
+ */
+.agenda-dia-min-width {
+  min-width: 960px;
+}
+
+.turno-dia-card {
+  container-type: inline-size;
+  container-name: turno-dia;
+}
+
+.turno-estado-pill-short {
+  display: none;
+}
+
+/* Umbral = TURNO_DIA_PILL_COMPACT_BELOW_PX (260) en turno-dia-layout.ts */
+@container turno-dia (width < 260px) {
+  .turno-estado-pill-full {
+    display: none;
+  }
+
+  .turno-estado-pill-short {
+    display: inline;
+  }
+
+  .turno-estado-pill--compactible {
+    min-width: 0;
+  }
+}

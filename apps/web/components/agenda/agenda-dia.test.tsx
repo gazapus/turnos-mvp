@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { TurnoListItemDto } from '@turnos/shared-types';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { AGENDA_DIA_MIN_WIDTH_PX } from '@/lib/agenda/turno-dia-layout';
 import { fetchTurnos } from '@/lib/api/turnos-client';
 import { toCalendarEvent } from '@/lib/agenda/turno-dia-event';
 import { AgendaDia } from './agenda-dia';
@@ -113,6 +114,10 @@ describe('AgendaDia', () => {
     expect(await screen.findByText(/julio alarcón/i)).toBeInTheDocument();
     expect(screen.getByText(/pepin gonzales/i)).toBeInTheDocument();
     expect(screen.getByText(/programado/i)).toBeInTheDocument();
+    expect(screen.getByLabelText('Programado')).toHaveAttribute(
+      'title',
+      'Programado',
+    );
     const tipoIcon = screen.getByLabelText(/primer turno/i);
     expect(tipoIcon.querySelector('img')).toHaveAttribute('width', '22');
   });
@@ -136,6 +141,9 @@ describe('AgendaDia', () => {
 
     const panel = await screen.findByTestId('agenda-dia');
     expect(panel.className).toContain('glass-panel-agenda');
+    expect(panel.className).toContain('overflow-x-auto');
+    expect(panel.querySelector('.agenda-dia-min-width')).not.toBeNull();
+    expect(AGENDA_DIA_MIN_WIDTH_PX).toBe(960);
     const calendar = screen.getByTestId('agenda-dia-calendar');
     expect(calendar.className).toContain('h-[calc(100dvh-24rem)]');
     expect(calendar.className).toContain('min-h-[32rem]');

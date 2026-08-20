@@ -29,7 +29,7 @@ export function TurnoDiaCard({ turno }: TurnoDiaCardProps) {
   return (
     <div
       className={[
-        'flex h-full min-h-0 items-center gap-1.5 overflow-hidden rounded-md p-1.5 text-foreground',
+        'turno-dia-card flex h-full min-h-0 items-center gap-1.5 overflow-hidden rounded-md p-1.5 text-foreground',
         ESTADO_CARD_BG[turno.estado],
       ].join(' ')}
     >
@@ -44,7 +44,7 @@ export function TurnoDiaCard({ turno }: TurnoDiaCardProps) {
         </p>
       </div>
       <div className="shrink-0">
-        <TurnoEstadoPill estado={turno.estado} />
+        <TurnoEstadoPill estado={turno.estado} compactible />
       </div>
       <div className="shrink-0">
         <TurnoTipoIcon tipo={turno.tipo} size="sm" />

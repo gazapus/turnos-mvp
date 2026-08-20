@@ -85,60 +85,62 @@ export function AgendaDia({ params }: AgendaDiaProps) {
 
   return (
     <div
-      className="glass-panel-agenda flex flex-col rounded-b-lg"
+      className="glass-panel-agenda overflow-x-auto rounded-b-lg"
       data-testid="agenda-dia"
     >
-      <AgendaDiaSelector params={params} />
-      <div
-        className="agenda-dia-calendar flex h-[calc(100dvh-24rem)] min-h-[32rem] flex-col overflow-hidden"
-        data-testid="agenda-dia-calendar"
-      >
-        {query.isLoading && (
-          <p className="py-8 text-center text-muted-foreground">
-            Cargando turnos…
-          </p>
-        )}
+      <div className="agenda-dia-min-width flex flex-col">
+        <AgendaDiaSelector params={params} />
+        <div
+          className="agenda-dia-calendar flex h-[calc(100dvh-24rem)] min-h-[32rem] flex-col overflow-hidden"
+          data-testid="agenda-dia-calendar"
+        >
+          {query.isLoading && (
+            <p className="py-8 text-center text-muted-foreground">
+              Cargando turnos…
+            </p>
+          )}
 
-        {query.isError && (
-          <p className="py-8 text-center text-danger" role="alert">
-            No se pudieron cargar los turnos.
-          </p>
-        )}
+          {query.isError && (
+            <p className="py-8 text-center text-danger" role="alert">
+              No se pudieron cargar los turnos.
+            </p>
+          )}
 
-        {showEmptyMessage && (
-          <p className="sr-only">
-            No hay turnos para mostrar con los filtros actuales.
-          </p>
-        )}
+          {showEmptyMessage && (
+            <p className="sr-only">
+              No hay turnos para mostrar con los filtros actuales.
+            </p>
+          )}
 
-        {!query.isLoading && !query.isError && (
-          <div className="min-h-0 flex-1">
-            <FullCalendar
-              ref={calendarRef}
-              plugins={[timeGridPlugin]}
-              initialView="timeGridDay"
-              initialDate={params.fecha}
-              locale={esLocale}
-              headerToolbar={false}
-              allDaySlot={false}
-              slotEventOverlap={false}
-              scrollTime="08:00:00"
-              scrollTimeReset
-              slotMinTime="00:00:00"
-              slotMaxTime="24:00:00"
-              slotDuration="01:00:00"
-              slotLabelFormat={{
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: false,
-              }}
-              displayEventTime={false}
-              height="100%"
-              events={events}
-              eventContent={renderTurnoEventContent}
-            />
-          </div>
-        )}
+          {!query.isLoading && !query.isError && (
+            <div className="min-h-0 flex-1">
+              <FullCalendar
+                ref={calendarRef}
+                plugins={[timeGridPlugin]}
+                initialView="timeGridDay"
+                initialDate={params.fecha}
+                locale={esLocale}
+                headerToolbar={false}
+                allDaySlot={false}
+                slotEventOverlap={false}
+                scrollTime="08:00:00"
+                scrollTimeReset
+                slotMinTime="00:00:00"
+                slotMaxTime="24:00:00"
+                slotDuration="01:00:00"
+                slotLabelFormat={{
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  hour12: false,
+                }}
+                displayEventTime={false}
+                height="100%"
+                events={events}
+                eventContent={renderTurnoEventContent}
+              />
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
