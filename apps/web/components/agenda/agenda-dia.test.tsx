@@ -2,6 +2,7 @@ import { cleanup, render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { TurnoListItemDto } from '@turnos/shared-types';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import React from 'react';
 
 import { AGENDA_DIA_MIN_WIDTH_PX } from '@/lib/agenda/turno-dia-layout';
 import { fetchTurnos } from '@/lib/api/turnos-client';
@@ -9,6 +10,8 @@ import { toCalendarEvent } from '@/lib/agenda/turno-dia-event';
 import { AgendaDia } from './agenda-dia';
 
 const mockFetchTurnos = vi.mocked(fetchTurnos);
+const mockUpdateSize = vi.fn();
+const mockGotoDate = vi.fn();
 
 vi.mock('@/app/agenda-dia.css', () => ({}));
 vi.mock('@/lib/api/turnos-client', () => ({
@@ -22,28 +25,40 @@ vi.mock('next/navigation', () => ({
 vi.mock('@fullcalendar/timegrid', () => ({ default: {} }));
 vi.mock('@fullcalendar/core/locales/es', () => ({ default: {} }));
 vi.mock('@fullcalendar/react', () => ({
-  default: ({
-    events,
-    eventContent,
-  }: {
-    events: Array<{
-      id: string;
-      extendedProps: { turno: TurnoListItemDto };
-    }>;
-    eventContent: (arg: {
-      event: { extendedProps: { turno: TurnoListItemDto } };
-    }) => React.ReactNode;
-  }) => (
-    <div data-testid="fullcalendar-mock">
-      {events.map((event) => (
-        <div key={event.id}>
-          {eventContent({
-            event: { extendedProps: event.extendedProps },
-          })}
-        </div>
-      ))}
-    </div>
-  ),
+  default: React.forwardRef(function FullCalendarMock(
+    {
+      events,
+      eventContent,
+    }: {
+      events: Array<{
+        id: string;
+        extendedProps: { turno: TurnoListItemDto };
+      }>;
+      eventContent: (arg: {
+        event: { extendedProps: { turno: TurnoListItemDto } };
+      }) => React.ReactNode;
+    },
+    ref: React.ForwardedRef<{ getApi: () => { updateSize: () => void; gotoDate: (date: string) => void } }>,
+  ) {
+    React.useImperativeHandle(ref, () => ({
+      getApi: () => ({
+        updateSize: mockUpdateSize,
+        gotoDate: mockGotoDate,
+      }),
+    }));
+
+    return (
+      <div data-testid="fullcalendar-mock">
+        {events.map((event) => (
+          <div key={event.id}>
+            {eventContent({
+              event: { extendedProps: event.extendedProps },
+            })}
+          </div>
+        ))}
+      </div>
+    );
+  }),
 }));
 
 function renderWithQuery(ui: React.ReactElement) {
@@ -92,6 +107,8 @@ describe('AgendaDia', () => {
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();
+    mockUpdateSize.mockClear();
+    mockGotoDate.mockClear();
   });
 
   it('renderiza médico, paciente, estado y tipo en el eventContent', async () => {
@@ -170,5 +187,51 @@ describe('AgendaDia', () => {
     expect(await screen.findByText(/julio alarcón/i)).toBeInTheDocument();
     expect(screen.queryByText(/laura gómez/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/ana lópez/i)).not.toBeInTheDocument();
+  });
+
+  it('observa el contenedor y llama updateSize cuando cambia el tamaño', async () => {
+    const observe = vi.fn();
+    const disconnect = vi.fn();
+    let resizeCallback: ResizeObserverCallback | undefined;
+
+    class ResizeObserverMock {
+      constructor(callback: ResizeObserverCallback) {
+        resizeCallback = callback;
+      }
+
+      observe = observe;
+      disconnect = disconnect;
+      unobserve = vi.fn();
+    }
+
+    vi.stubGlobal('ResizeObserver', ResizeObserverMock);
+
+    mockFetchTurnos.mockResolvedValue({
+      items: [programado],
+      cursorSiguiente: null,
+      cursorAnterior: null,
+    });
+
+    renderWithQuery(
+      <AgendaDia
+        params={{
+          vista: 'dia',
+          cancelados: true,
+          fecha: '2026-08-16',
+        }}
+      />,
+    );
+
+    await screen.findByText(/julio alarcón/i);
+
+    const calendar = screen.getByTestId('agenda-dia-calendar');
+    expect(observe).toHaveBeenCalledWith(calendar);
+
+    mockUpdateSize.mockClear();
+    resizeCallback?.([], {} as ResizeObserver);
+
+    expect(mockUpdateSize).toHaveBeenCalled();
+
+    vi.unstubAllGlobals();
   });
 });

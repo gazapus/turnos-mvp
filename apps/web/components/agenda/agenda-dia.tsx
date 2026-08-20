@@ -45,6 +45,7 @@ export function renderTurnoEventContent(arg: EventContentArg) {
  */
 export function AgendaDia({ params }: AgendaDiaProps) {
   const calendarRef = useRef<FullCalendar>(null);
+  const calendarContainerRef = useRef<HTMLDivElement>(null);
   const appliedFilters = useMemo(() => toAppliedFilters(params), [params]);
 
   const query = useQuery({
@@ -80,6 +81,20 @@ export function AgendaDia({ params }: AgendaDiaProps) {
     api.updateSize();
   }, [params.fecha, events.length]);
 
+  useEffect(() => {
+    const container = calendarContainerRef.current;
+    if (!container || typeof ResizeObserver === 'undefined') {
+      return;
+    }
+
+    const observer = new ResizeObserver(() => {
+      calendarRef.current?.getApi()?.updateSize();
+    });
+
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [query.isLoading, query.isError]);
+
   const showEmptyMessage =
     !query.isLoading && !query.isError && visibleItems.length === 0;
 
@@ -91,6 +106,7 @@ export function AgendaDia({ params }: AgendaDiaProps) {
       <div className="agenda-dia-min-width flex flex-col">
         <AgendaDiaSelector params={params} />
         <div
+          ref={calendarContainerRef}
           className="agenda-dia-calendar flex h-[calc(100dvh-24rem)] min-h-[32rem] flex-col overflow-hidden"
           data-testid="agenda-dia-calendar"
         >
