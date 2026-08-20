@@ -30,6 +30,15 @@
   border-color: var(--border);
 }
 
+/**
+ * FullCalendar v6 (Windows): el header hereda overflow-y: scroll del body para
+ * alinear columnas, pero no hay contenido que scrollear → flechas fantasma.
+ * Ver https://github.com/fullcalendar/fullcalendar/issues/6047
+ */
+.agenda-dia-calendar .fc-scrollgrid-section-header .fc-scroller {
+  overflow: hidden !important;
+}
+
 /* Default de FullCalendar: 1.5em. 4.5em previo + 50% → 6.75em. */
 .agenda-dia-calendar .fc .fc-timegrid-slot {
   height: 6.75em;
