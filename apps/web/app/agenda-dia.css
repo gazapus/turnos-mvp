@@ -13,7 +13,7 @@
   --fc-today-bg-color: transparent;
   --fc-now-indicator-color: var(--primary);
   --fc-event-bg-color: var(--muted);
-  --fc-event-border-color: transparent;
+  --fc-event-border-color: color-mix(in srgb, var(--surface) 80%, transparent);
   --fc-event-text-color: var(--foreground);
   --fc-list-event-hover-bg-color: transparent;
   /* No usar height: 100% acá: pisa el alto explícito de Tailwind y
@@ -53,9 +53,10 @@
   margin: 0;
 }
 
+/* Borde blanco translúcido: distingue eventos adyacentes del mismo color. */
 .agenda-dia-calendar .fc-timegrid-event {
   margin: 0;
-  border: none;
+  border: 1px solid color-mix(in srgb, var(--surface) 80%, transparent);
   border-radius: var(--radius-md);
   box-shadow: none;
 }
@@ -67,7 +68,7 @@
 }
 
 .agenda-dia-calendar .fc-event {
-  border: none;
+  border: 1px solid color-mix(in srgb, var(--surface) 80%, transparent);
 }
 
 .agenda-dia-calendar .fc-turno-PROGRAMADO {
