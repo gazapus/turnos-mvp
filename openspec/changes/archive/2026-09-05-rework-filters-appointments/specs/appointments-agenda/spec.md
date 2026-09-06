@@ -1,55 +1,4 @@
-## Purpose
-
-Pantalla de Agenda de Turnos (`/agenda`): layout compartido entre modos de visualización, filtros por médico/especialidad/paciente (combobox), tabs de vista, checkbox "Solo Pendientes" (consulta al backend) y sincronización de estado con query params de la URL.
-
-## Requirements
-
-### Requirement: Layout de la pantalla de Agenda de Turnos
-
-El sistema SHALL renderizar en la ruta `/agenda` un layout compartido por todos los modos de visualización de turnos, compuesto por: título "Agenda de Turnos", formulario de filtros, botón "Nuevo Turno" (según rol, ver requirement dedicado), tabs de modo de visualización, checkbox de "Solo Pendientes" y un contenedor donde se monta el modo de visualización activo. Este layout MUST ser el mismo sin importar qué modo de visualización esté seleccionado.
-
-#### Scenario: Render inicial de la Agenda
-
-- **WHEN** un usuario autenticado (cualquier rol) abre `/agenda`
-- **THEN** el sistema muestra el título "Agenda de Turnos", el formulario de filtros, las tabs Lista/Día/Semana/Mes y el checkbox "Solo Pendientes"
-
-#### Scenario: Layout estable entre modos de visualización
-
-- **WHEN** el usuario cambia de tab de modo de visualización
-- **THEN** el título, el formulario de filtros, el botón "Nuevo Turno" (si corresponde a su rol) y el checkbox "Solo Pendientes" permanecen visibles y en la misma posición; solo cambia el contenido del contenedor de visualización
-
-### Requirement: Botón "Nuevo Turno" visible solo para Recepcionista y Administrador
-
-El sistema SHALL mostrar el botón "Nuevo Turno" únicamente a los roles Recepcionista y Administrador en el layout de Agenda. El rol Médico MUST no ver este botón. En esta etapa, cuando el botón es visible, MUST no disparar ninguna acción (sin navegación ni modal).
-
-#### Scenario: Recepcionista o administrador ve el botón
-
-- **WHEN** un usuario con rol Recepcionista o Administrador abre `/agenda`
-- **THEN** el sistema muestra el botón "Nuevo Turno" en el layout
-
-#### Scenario: Médico no ve el botón
-
-- **WHEN** un usuario con rol Médico abre `/agenda`
-- **THEN** el sistema no muestra el botón "Nuevo Turno" en el layout
-
-#### Scenario: Click en Nuevo Turno stub
-
-- **WHEN** un usuario con rol Recepcionista o Administrador activa el botón "Nuevo Turno"
-- **THEN** el sistema no abre ningún formulario ni navega a otra ruta
-
-### Requirement: Formulario de filtros por médico, especialidad y paciente
-
-El sistema SHALL exponer un formulario de filtros con tres combobox — médico, especialidad, paciente —, un botón "Aplicar" y un botón de reset. El valor vacío de cada combobox MUST significar "Todos", salvo que el rol del usuario lo restrinja (ver requirement de defaults por rol). Las consultas de turnos MUST ejecutarse al activar "Aplicar" o el reset; cambiar la selección de un campo sin aplicar MUST no disparar una consulta de turnos. Las peticiones de opciones del combobox de paciente (búsqueda e hidratación por id) MUST no considerarse consultas de turnos.
-
-#### Scenario: Cambiar un filtro sin aplicar
-
-- **WHEN** el usuario cambia la selección de médico, especialidad o paciente sin activar "Aplicar" ni el reset
-- **THEN** el sistema no realiza ninguna consulta de turnos al backend
-
-#### Scenario: Aplicar filtros
-
-- **WHEN** el usuario activa el botón "Aplicar"
-- **THEN** el sistema ejecuta una nueva consulta al backend con la combinación de filtros seleccionada
+## ADDED Requirements
 
 ### Requirement: Combobox de filtros con búsqueda
 
@@ -91,6 +40,50 @@ El formulario de filtros SHALL incluir, al lado de "Aplicar", un botón de reset
 - **WHEN** un usuario con rol Médico activa el botón de reset
 - **THEN** el filtro de médico sigue mostrando su propio usuario y no editable, especialidad y paciente quedan en "Todos", "Solo Pendientes" queda marcado y el sistema consulta turnos con esos defaults
 
+### Requirement: Checkbox "Solo Pendientes" consulta el backend
+
+El sistema SHALL exponer un checkbox "Solo Pendientes" en el layout de Agenda (misma posición que el antiguo "Cancelados"). Marcarlo MUST restringir los turnos a estados `PROGRAMADO` y `CONFIRMADO`. Desmarcarlo MUST incluir todos los estados. Activar o desactivar el checkbox MUST actualizar el query param `soloPendientes` y MUST disparar una nueva consulta al backend, mostrando el estado de carga de la vista activa.
+
+#### Scenario: Marcar Solo Pendientes refetchea
+
+- **WHEN** el usuario marca el checkbox "Solo Pendientes"
+- **THEN** la URL incluye `soloPendientes=true` y el sistema consulta de nuevo los turnos pendientes, con indicador de carga
+
+#### Scenario: Desmarcar Solo Pendientes refetchea
+
+- **WHEN** el usuario desmarca el checkbox "Solo Pendientes"
+- **THEN** la URL incluye `soloPendientes=false` y el sistema consulta de nuevo los turnos de todos los estados, con indicador de carga
+
+## MODIFIED Requirements
+
+### Requirement: Layout de la pantalla de Agenda de Turnos
+
+El sistema SHALL renderizar en la ruta `/agenda` un layout compartido por todos los modos de visualización de turnos, compuesto por: título "Agenda de Turnos", formulario de filtros, botón "Nuevo Turno" (según rol, ver requirement dedicado), tabs de modo de visualización, checkbox de "Solo Pendientes" y un contenedor donde se monta el modo de visualización activo. Este layout MUST ser el mismo sin importar qué modo de visualización esté seleccionado.
+
+#### Scenario: Render inicial de la Agenda
+
+- **WHEN** un usuario autenticado (cualquier rol) abre `/agenda`
+- **THEN** el sistema muestra el título "Agenda de Turnos", el formulario de filtros, las tabs Lista/Día/Semana/Mes y el checkbox "Solo Pendientes"
+
+#### Scenario: Layout estable entre modos de visualización
+
+- **WHEN** el usuario cambia de tab de modo de visualización
+- **THEN** el título, el formulario de filtros, el botón "Nuevo Turno" (si corresponde a su rol) y el checkbox "Solo Pendientes" permanecen visibles y en la misma posición; solo cambia el contenido del contenedor de visualización
+
+### Requirement: Formulario de filtros por médico, especialidad y paciente
+
+El sistema SHALL exponer un formulario de filtros con tres combobox — médico, especialidad, paciente —, un botón "Aplicar" y un botón de reset. El valor vacío de cada combobox MUST significar "Todos", salvo que el rol del usuario lo restrinja (ver requirement de defaults por rol). Las consultas de turnos MUST ejecutarse al activar "Aplicar" o el reset; cambiar la selección de un campo sin aplicar MUST no disparar una consulta de turnos. Las peticiones de opciones del combobox de paciente (búsqueda e hidratación por id) MUST no considerarse consultas de turnos.
+
+#### Scenario: Cambiar un filtro sin aplicar
+
+- **WHEN** el usuario cambia la selección de médico, especialidad o paciente sin activar "Aplicar" ni el reset
+- **THEN** el sistema no realiza ninguna consulta de turnos al backend
+
+#### Scenario: Aplicar filtros
+
+- **WHEN** el usuario activa el botón "Aplicar"
+- **THEN** el sistema ejecuta una nueva consulta al backend con la combinación de filtros seleccionada
+
 ### Requirement: Defaults de filtros según el rol del usuario
 
 El sistema SHALL preseleccionar los filtros de la Agenda según el rol del usuario autenticado al cargar la pantalla sin filtros explícitos en la URL:
@@ -130,30 +123,10 @@ El sistema SHALL reflejar los filtros aplicados y el modo de visualización acti
 - **WHEN** un usuario abre `/agenda` sin el query param de vista
 - **THEN** el sistema activa el modo de visualización Lista por defecto
 
-### Requirement: Tabs de modo de visualización
+## REMOVED Requirements
 
-El sistema SHALL mostrar cuatro tabs — Lista, Día, Semana, Mes — que representan el modo de visualización de turnos. Seleccionar una tab MUST actualizar el query param de vista en la URL y montar el contenido correspondiente en el contenedor de visualización, sin recargar la página completa.
+### Requirement: Checkbox de "Cancelados" es solo cliente
 
-#### Scenario: Cambiar de tab
+**Reason**: Reemplazado por "Solo Pendientes", que filtra estados terminales en el backend y recarga la vista.
 
-- **WHEN** el usuario activa una tab distinta a la actual
-- **THEN** el sistema actualiza el query param de vista en la URL y muestra el contenido de esa vista en el contenedor, conservando los filtros actuales
-
-#### Scenario: Vistas Día, Semana y Mes sin datos
-
-- **WHEN** el usuario activa la tab Día, Semana o Mes
-- **THEN** el sistema muestra un contenedor vacío para esa vista, sin consultar datos de turnos ni ofrecer interacción adicional
-
-### Requirement: Checkbox "Solo Pendientes" consulta el backend
-
-El sistema SHALL exponer un checkbox "Solo Pendientes" en el layout de Agenda (misma posición que el antiguo "Cancelados"). Marcarlo MUST restringir los turnos a estados `PROGRAMADO` y `CONFIRMADO`. Desmarcarlo MUST incluir todos los estados. Activar o desactivar el checkbox MUST actualizar el query param `soloPendientes` y MUST disparar una nueva consulta al backend, mostrando el estado de carga de la vista activa.
-
-#### Scenario: Marcar Solo Pendientes refetchea
-
-- **WHEN** el usuario marca el checkbox "Solo Pendientes"
-- **THEN** la URL incluye `soloPendientes=true` y el sistema consulta de nuevo los turnos pendientes, con indicador de carga
-
-#### Scenario: Desmarcar Solo Pendientes refetchea
-
-- **WHEN** el usuario desmarca el checkbox "Solo Pendientes"
-- **THEN** la URL incluye `soloPendientes=false` y el sistema consulta de nuevo los turnos de todos los estados, con indicador de carga
+**Migration**: Usar el checkbox "Solo Pendientes" y el query param `soloPendientes`. El param `cancelados` se ignora.

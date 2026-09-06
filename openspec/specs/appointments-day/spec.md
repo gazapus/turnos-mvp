@@ -1,6 +1,6 @@
 ## Purpose
 
-Modo de visualización Día de la Agenda de Turnos: grilla horaria de 24hs con turnos posicionados por hora y duración real, selector de fecha con navegación, y reutilización del layout, filtros y checkbox de cancelados ya definidos en `appointments-agenda`.
+Modo de visualización Día de la Agenda de Turnos: grilla horaria de 24hs con turnos posicionados por hora y duración real, selector de fecha con navegación, y reutilización del layout, filtros y checkbox "Solo Pendientes" ya definidos en `appointments-agenda`.
 
 ## Requirements
 
@@ -133,7 +133,7 @@ Los botones flecha SHALL avanzar o retroceder la fecha seleccionada en exactamen
 
 ### Requirement: Cambiar la fecha dispara una nueva consulta al backend
 
-Cualquier cambio de fecha seleccionada (input, calendario emergente, flechas o botón HOY) SHALL disparar una nueva consulta al backend acotada a la nueva fecha, respetando los filtros de médico/especialidad/paciente activos.
+Cualquier cambio de fecha seleccionada (input, calendario emergente, flechas o botón HOY) SHALL disparar una nueva consulta al backend acotada a la nueva fecha, respetando los filtros de médico, especialidad, paciente y `soloPendientes` activos.
 
 #### Scenario: Nueva consulta al cambiar de fecha
 
@@ -168,16 +168,16 @@ Al cargar el modo Día o al cambiar de fecha, el sistema SHALL posicionar autom�
 - **WHEN** el usuario scrollea hasta el final de la grilla (las 24:00 del día seleccionado)
 - **THEN** el sistema no cambia la fecha seleccionada ni consulta turnos de otro día
 
-### Requirement: El checkbox de "Cancelados" aplica al modo Día sin refetch
+### Requirement: El checkbox "Solo Pendientes" recarga el modo Día
 
-El checkbox "Cancelados" del layout compartido de la Agenda SHALL alternar la visibilidad de los turnos en estado Cancelado ya cargados en el modo Día, sin disparar ninguna consulta adicional al backend.
+El checkbox "Solo Pendientes" del layout compartido de la Agenda SHALL aplicarse al modo Día mediante una nueva consulta a `GET /api/turnos` con el filtro `soloPendientes` y la fecha seleccionada. Activar o desactivar el checkbox MUST no filtrar cards en memoria.
 
-#### Scenario: Ocultar cancelados en el modo Día
+#### Scenario: Marcar Solo Pendientes en el modo Día
 
-- **WHEN** el usuario desmarca el checkbox "Cancelados" mientras el modo Día está activo
-- **THEN** el sistema oculta las cards de turnos en estado Cancelado ya cargadas, sin realizar una nueva consulta al backend
+- **WHEN** el usuario marca el checkbox "Solo Pendientes" mientras el modo Día está activo
+- **THEN** el sistema consulta de nuevo los turnos del día restringidos a estados `PROGRAMADO` y `CONFIRMADO` y actualiza la grilla
 
-#### Scenario: Mostrar cancelados en el modo Día
+#### Scenario: Desmarcar Solo Pendientes en el modo Día
 
-- **WHEN** el usuario marca el checkbox "Cancelados" mientras el modo Día está activo
-- **THEN** el sistema muestra las cards de turnos en estado Cancelado ya cargadas, sin realizar una nueva consulta al backend
+- **WHEN** el usuario desmarca el checkbox "Solo Pendientes" mientras el modo Día está activo
+- **THEN** el sistema consulta de nuevo los turnos del día de todos los estados y actualiza la grilla

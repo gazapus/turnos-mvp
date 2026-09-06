@@ -1,23 +1,31 @@
 'use client';
 
-import type { AuthRole } from '@turnos/shared-types';
+import type { AuthUser } from '@turnos/shared-types';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useQuery } from '@tanstack/react-query';
+import { RotateCcw } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 
+import { Combobox } from '@/components/ui';
+import {
+  PACIENTE_SEARCH_DEBOUNCE_MS,
+  PACIENTE_SEARCH_MIN_LENGTH,
+} from '@/lib/agenda/paciente-search';
 import {
   AGENDA_FILTER_ALL,
   buildAgendaHref,
+  defaultSoloPendientesForRole,
   type ParsedAgendaParams,
 } from '@/lib/agenda/url-params';
 import {
   fetchEspecialidades,
   fetchMedicos,
+  fetchPacienteById,
   fetchPacientes,
 } from '@/lib/api/turnos-client';
-import { useQuery } from '@tanstack/react-query';
 
 const filtrosSchema = z.object({
   medicoId: z.string(),
@@ -27,36 +35,46 @@ const filtrosSchema = z.object({
 
 type FiltrosFormValues = z.infer<typeof filtrosSchema>;
 
-const SELECT_FIELD_CLASS =
-  'select-field cursor-pointer rounded-md border border-border bg-input pl-3 py-2 text-sm text-input-foreground disabled:cursor-not-allowed disabled:opacity-60';
-
 type AgendaFiltrosFormProps = {
-  rol: AuthRole;
+  user: AuthUser;
   params: ParsedAgendaParams;
 };
 
 /**
- * Formulario de filtros de agenda (médico, especialidad, paciente).
- * Leaf client: RHF + Zod; solo refetchea al presionar Aplicar.
+ * Formatea una opción de persona como "Apellido, Nombre".
  *
- * @param props - Rol del usuario y params actuales de URL.
- * @returns Franja de filtros con botón Aplicar.
+ * @param persona - Nombre y apellido.
+ * @returns Label del combobox.
  */
-export function AgendaFiltrosForm({ rol, params }: AgendaFiltrosFormProps) {
+function personaLabel(persona: { nombre: string; apellido: string }): string {
+  return `${persona.apellido}, ${persona.nombre}`;
+}
+
+/**
+ * Formulario de filtros de agenda (médico, especialidad, paciente).
+ * Leaf client: combobox + RHF + Zod; consulta turnos al Aplicar o resetear.
+ *
+ * @param props - Usuario de sesión y params actuales de URL.
+ * @returns Franja de filtros con Aplicar y reset.
+ */
+export function AgendaFiltrosForm({ user, params }: AgendaFiltrosFormProps) {
   const router = useRouter();
-  const isMedico = rol === 'MEDICO';
+  const isMedico = user.rol === 'MEDICO';
 
   const medicosQuery = useQuery({
     queryKey: ['medicos'],
     queryFn: fetchMedicos,
+    enabled: !isMedico,
   });
   const especialidadesQuery = useQuery({
     queryKey: ['especialidades'],
     queryFn: fetchEspecialidades,
   });
-  const pacientesQuery = useQuery({
-    queryKey: ['pacientes'],
-    queryFn: fetchPacientes,
+  const pacienteSeleccionadoQuery = useQuery({
+    queryKey: ['paciente', params.pacienteId],
+    queryFn: () => fetchPacienteById(params.pacienteId as string),
+    enabled: Boolean(params.pacienteId),
+    retry: false,
   });
 
   const form = useForm<FiltrosFormValues>({
@@ -84,21 +102,42 @@ export function AgendaFiltrosForm({ rol, params }: AgendaFiltrosFormProps) {
   function onSubmit(values: FiltrosFormValues): void {
     const next: ParsedAgendaParams = {
       ...params,
-      medicoId:
-        isMedico || values.medicoId === AGENDA_FILTER_ALL
-          ? isMedico
-            ? params.medicoId
-            : undefined
-          : values.medicoId,
-      especialidadId:
-        values.especialidadId === AGENDA_FILTER_ALL
-          ? undefined
-          : values.especialidadId,
-      pacienteId:
-        values.pacienteId === AGENDA_FILTER_ALL ? undefined : values.pacienteId,
+      medicoId: isMedico ? params.medicoId : values.medicoId || undefined,
+      especialidadId: values.especialidadId || undefined,
+      pacienteId: values.pacienteId || undefined,
     };
     router.replace(buildAgendaHref(next));
   }
+
+  /**
+   * Restablece filtros a los defaults del rol y dispara la búsqueda.
+   */
+  function handleReset(): void {
+    const next: ParsedAgendaParams = {
+      ...params,
+      medicoId: isMedico ? user.id : undefined,
+      especialidadId: undefined,
+      pacienteId: undefined,
+      soloPendientes: defaultSoloPendientesForRole(user.rol),
+    };
+    form.reset({
+      medicoId: next.medicoId ?? AGENDA_FILTER_ALL,
+      especialidadId: AGENDA_FILTER_ALL,
+      pacienteId: AGENDA_FILTER_ALL,
+    });
+    router.replace(buildAgendaHref(next));
+  }
+
+  const medicoOptions = (medicosQuery.data ?? []).map((medico) => ({
+    id: medico.id,
+    label: personaLabel(medico),
+  }));
+  const especialidadOptions = (especialidadesQuery.data ?? []).map(
+    (especialidad) => ({
+      id: especialidad.id,
+      label: especialidad.nombre,
+    }),
+  );
 
   return (
     <form
@@ -109,57 +148,74 @@ export function AgendaFiltrosForm({ rol, params }: AgendaFiltrosFormProps) {
         <label htmlFor="filtro-medico" className="text-sm font-medium">
           Médico
         </label>
-        <select
-          id="filtro-medico"
-          className={SELECT_FIELD_CLASS}
-          disabled={isMedico || medicosQuery.isLoading}
-          {...form.register('medicoId')}
-        >
-          {!isMedico && <option value={AGENDA_FILTER_ALL}>Todos</option>}
-          {(medicosQuery.data ?? []).map((medico) => (
-            <option key={medico.id} value={medico.id}>
-              {medico.apellido}, {medico.nombre}
-            </option>
-          ))}
-        </select>
+        <Controller
+          control={form.control}
+          name="medicoId"
+          render={({ field }) => (
+            <Combobox
+              id="filtro-medico"
+              value={field.value}
+              onChange={field.onChange}
+              options={medicoOptions}
+              selectedLabel={isMedico ? personaLabel(user) : undefined}
+              placeholder="Todos"
+              disabled={isMedico || medicosQuery.isLoading}
+            />
+          )}
+        />
       </div>
 
       <div className="flex min-w-[180px] flex-1 flex-col gap-1">
         <label htmlFor="filtro-especialidad" className="text-sm font-medium">
           Especialidad
         </label>
-        <select
-          id="filtro-especialidad"
-          className={SELECT_FIELD_CLASS}
-          disabled={especialidadesQuery.isLoading}
-          {...form.register('especialidadId')}
-        >
-          <option value={AGENDA_FILTER_ALL}>Todos</option>
-          {(especialidadesQuery.data ?? []).map((esp) => (
-            <option key={esp.id} value={esp.id}>
-              {esp.nombre}
-            </option>
-          ))}
-        </select>
+        <Controller
+          control={form.control}
+          name="especialidadId"
+          render={({ field }) => (
+            <Combobox
+              id="filtro-especialidad"
+              value={field.value}
+              onChange={field.onChange}
+              options={especialidadOptions}
+              placeholder="Todos"
+              disabled={especialidadesQuery.isLoading}
+            />
+          )}
+        />
       </div>
 
       <div className="flex min-w-[180px] flex-1 flex-col gap-1">
         <label htmlFor="filtro-paciente" className="text-sm font-medium">
           Paciente
         </label>
-        <select
-          id="filtro-paciente"
-          className={SELECT_FIELD_CLASS}
-          disabled={pacientesQuery.isLoading}
-          {...form.register('pacienteId')}
-        >
-          <option value={AGENDA_FILTER_ALL}>Todos</option>
-          {(pacientesQuery.data ?? []).map((paciente) => (
-            <option key={paciente.id} value={paciente.id}>
-              {paciente.apellido}, {paciente.nombre}
-            </option>
-          ))}
-        </select>
+        <Controller
+          control={form.control}
+          name="pacienteId"
+          render={({ field }) => (
+            <Combobox
+              id="filtro-paciente"
+              value={field.value}
+              onChange={field.onChange}
+              selectedLabel={
+                field.value === params.pacienteId &&
+                pacienteSeleccionadoQuery.data
+                  ? personaLabel(pacienteSeleccionadoQuery.data)
+                  : undefined
+              }
+              placeholder="Todos"
+              minQueryLength={PACIENTE_SEARCH_MIN_LENGTH}
+              debounceMs={PACIENTE_SEARCH_DEBOUNCE_MS}
+              fetchOptions={async (query) => {
+                const pacientes = await fetchPacientes(query);
+                return pacientes.map((paciente) => ({
+                  id: paciente.id,
+                  label: personaLabel(paciente),
+                }));
+              }}
+            />
+          )}
+        />
       </div>
 
       <button
@@ -167,6 +223,14 @@ export function AgendaFiltrosForm({ rol, params }: AgendaFiltrosFormProps) {
         className="cursor-pointer rounded-md bg-primary px-6 py-2 text-sm font-semibold uppercase tracking-wide text-primary-foreground hover:bg-primary-hover"
       >
         Aplicar
+      </button>
+      <button
+        type="button"
+        onClick={handleReset}
+        aria-label="Restablecer filtros"
+        className="inline-flex size-9 cursor-pointer items-center justify-center rounded-md border border-foreground bg-background text-foreground hover:bg-muted"
+      >
+        <RotateCcw className="size-4" aria-hidden />
       </button>
     </form>
   );

@@ -84,7 +84,7 @@ export function fetchTurnos(
     medicoId: query.medicoId,
     especialidadId: query.especialidadId,
     pacienteId: query.pacienteId,
-    incluirCancelados: query.incluirCancelados ?? true,
+    soloPendientes: query.soloPendientes ?? false,
     cursor: query.cursor,
     direccion: query.direccion,
     fecha: query.fecha,
@@ -111,10 +111,22 @@ export function fetchEspecialidades(): Promise<EspecialidadOption[]> {
 }
 
 /**
- * Lista pacientes registrados.
+ * Busca pacientes por substring de nombre o apellido.
  *
- * @returns Opciones para combo de filtro.
+ * @param q - Texto de búsqueda (el backend ignora menos de 3 caracteres).
+ * @returns Coincidencias para el combobox.
  */
-export function fetchPacientes(): Promise<PacienteOption[]> {
-  return apiFetch<PacienteOption[]>('/api/pacientes');
+export function fetchPacientes(q: string): Promise<PacienteOption[]> {
+  const qs = buildQueryString({ q });
+  return apiFetch<PacienteOption[]>(`/api/pacientes${qs}`);
+}
+
+/**
+ * Obtiene un paciente por id para hidratar el combobox.
+ *
+ * @param id - UUID del paciente.
+ * @returns DTO mínimo del paciente.
+ */
+export function fetchPacienteById(id: string): Promise<PacienteOption> {
+  return apiFetch<PacienteOption>(`/api/pacientes/${id}`);
 }

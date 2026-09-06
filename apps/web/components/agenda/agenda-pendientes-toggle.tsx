@@ -7,24 +7,24 @@ import {
   type ParsedAgendaParams,
 } from '@/lib/agenda/url-params';
 
-type AgendaCanceladosToggleProps = {
+type AgendaPendientesToggleProps = {
   params: ParsedAgendaParams;
 };
 
 /**
- * Checkbox de visibilidad de turnos cancelados (solo cliente, sin refetch).
- * Leaf client: filtra filas ya cargadas y sincroniza query param `cancelados`.
+ * Checkbox "Solo Pendientes": filtra estados en el backend vía URL.
+ * Leaf client: actualiza `soloPendientes` y dispara refetch por queryKey.
  *
  * @param props - Params actuales de la URL.
- * @returns Checkbox "Cancelados".
+ * @returns Checkbox "Solo Pendientes".
  */
-export function AgendaCanceladosToggle({
+export function AgendaPendientesToggle({
   params,
-}: AgendaCanceladosToggleProps) {
+}: AgendaPendientesToggleProps) {
   const router = useRouter();
 
   /**
-   * Alterna visibilidad de cancelados en memoria vía URL.
+   * Alterna el filtro de pendientes y recarga la vista.
    *
    * @param checked - Nuevo valor del checkbox.
    */
@@ -32,7 +32,7 @@ export function AgendaCanceladosToggle({
     router.replace(
       buildAgendaHref({
         ...params,
-        cancelados: checked,
+        soloPendientes: checked,
       }),
     );
   }
@@ -42,10 +42,10 @@ export function AgendaCanceladosToggle({
       <input
         type="checkbox"
         className="size-4 cursor-pointer accent-primary"
-        checked={params.cancelados}
+        checked={params.soloPendientes}
         onChange={(event) => handleChange(event.target.checked)}
       />
-      Cancelados
+      <span>Solo Pendientes</span>
     </label>
   );
 }

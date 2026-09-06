@@ -113,7 +113,7 @@ export type TurnosListQuery = {
   medicoId?: string;
   especialidadId?: string;
   pacienteId?: string;
-  incluirCancelados?: boolean;
+  soloPendientes?: boolean;
   cursor?: string;
   direccion?: DireccionPaginacion;
   fecha?: string;
@@ -136,6 +136,6 @@ export type AgendaUrlParams = {
   medicoId?: string;
   especialidadId?: string;
   pacienteId?: string;
-  cancelados: boolean;
+  soloPendientes: boolean;
   fecha?: string;
 };

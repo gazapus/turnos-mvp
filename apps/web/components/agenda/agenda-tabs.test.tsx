@@ -25,7 +25,7 @@ describe('AgendaTabs', () => {
       <AgendaTabs
         params={{
           vista: 'lista',
-          cancelados: true,
+          soloPendientes: false,
           fecha: '2026-08-16',
         }}
       />,
@@ -43,7 +43,7 @@ describe('AgendaTabs', () => {
       <AgendaTabs
         params={{
           vista: 'lista',
-          cancelados: true,
+          soloPendientes: false,
           fecha: '2026-08-16',
         }}
       />,
@@ -52,7 +52,7 @@ describe('AgendaTabs', () => {
     await user.click(screen.getByRole('tab', { name: /día/i }));
 
     expect(replace).toHaveBeenCalledWith(
-      '/agenda?vista=dia&cancelados=true&fecha=2026-08-16',
+      '/agenda?vista=dia&soloPendientes=false&fecha=2026-08-16',
     );
   });
 
@@ -62,7 +62,7 @@ describe('AgendaTabs', () => {
       <AgendaTabs
         params={{
           vista: 'dia',
-          cancelados: true,
+          soloPendientes: false,
           fecha: '2026-08-16',
         }}
       />,
@@ -71,7 +71,7 @@ describe('AgendaTabs', () => {
     await user.click(screen.getByRole('tab', { name: /lista/i }));
 
     expect(replace).toHaveBeenCalledWith(
-      '/agenda?cancelados=true&fecha=2026-08-16',
+      '/agenda?soloPendientes=false&fecha=2026-08-16',
     );
   });
 });

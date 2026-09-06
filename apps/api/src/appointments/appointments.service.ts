@@ -31,7 +31,7 @@ type TurnoListFilters = {
   medicoId?: string;
   especialidadId?: string;
   pacienteId?: string;
-  incluirCancelados: boolean;
+  soloPendientes: boolean;
 };
 
 /**
@@ -77,14 +77,14 @@ export class AppointmentsService {
     query: ListTurnosQueryDto,
     user: JwtPayload,
   ): TurnoListFilters {
-    const incluirCancelados = query.incluirCancelados ?? true;
+    const soloPendientes = query.soloPendientes ?? false;
 
     if (user.rol === RolUsuario.MEDICO) {
       return {
         medicoId: user.sub,
         especialidadId: query.especialidadId,
         pacienteId: query.pacienteId,
-        incluirCancelados,
+        soloPendientes,
       };
     }
 
@@ -92,7 +92,7 @@ export class AppointmentsService {
       medicoId: query.medicoId,
       especialidadId: query.especialidadId,
       pacienteId: query.pacienteId,
-      incluirCancelados,
+      soloPendientes,
     };
   }
 
@@ -244,8 +244,10 @@ export class AppointmentsService {
     if (filters.pacienteId) {
       where.pacienteId = filters.pacienteId;
     }
-    if (!filters.incluirCancelados) {
-      where.estado = { not: EstadoTurno.CANCELADO };
+    if (filters.soloPendientes) {
+      where.estado = {
+        in: [EstadoTurno.PROGRAMADO, EstadoTurno.CONFIRMADO],
+      };
     }
 
     return where;

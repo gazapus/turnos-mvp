@@ -20,23 +20,6 @@ const ESTADO_EVENT_CLASS: Record<EstadoTurno, string> = {
 };
 
 /**
- * Filtra turnos cancelados en memoria según el checkbox de la Agenda.
- *
- * @param items - Turnos cargados del backend.
- * @param mostrarCancelados - true para incluir cancelados.
- * @returns Turnos visibles.
- */
-export function filterTurnosDia(
-  items: TurnoListItemDto[],
-  mostrarCancelados: boolean,
-): TurnoListItemDto[] {
-  if (mostrarCancelados) {
-    return items;
-  }
-  return items.filter((item) => item.estado !== 'CANCELADO');
-}
-
-/**
  * Mapea un turno de listado a un evento de FullCalendar.
  *
  * @param turno - Ítem de GET /api/turnos.

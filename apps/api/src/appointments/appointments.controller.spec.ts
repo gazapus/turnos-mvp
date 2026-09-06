@@ -34,6 +34,7 @@ jest.mock('@turnos/database', () => ({
   EstadoTurno: {
     CANCELADO: 'CANCELADO',
     PROGRAMADO: 'PROGRAMADO',
+    CONFIRMADO: 'CONFIRMADO',
   },
   RolUsuario: {
     MEDICO: 'MEDICO',
@@ -57,7 +58,7 @@ describe('AppointmentsService', () => {
     mockCount.mockResolvedValue(0);
 
     await service.listTurnos(
-      { medicoId: 'otro-id', incluirCancelados: true },
+      { medicoId: 'otro-id', soloPendientes: false },
       { sub: 'medico-propio', mail: 'm@x.c', rol: RolUsuario.MEDICO },
     );
 
@@ -75,7 +76,7 @@ describe('AppointmentsService', () => {
     mockCount.mockResolvedValue(0);
 
     await service.listTurnos(
-      { incluirCancelados: true },
+      { soloPendientes: false },
       { sub: 'admin', mail: 'a@b.c', rol: 'ADMIN' },
     );
 
@@ -92,7 +93,7 @@ describe('AppointmentsService', () => {
     mockCount.mockResolvedValue(5);
 
     const result = await service.listTurnos(
-      { incluirCancelados: true },
+      { soloPendientes: false },
       { sub: 'admin', mail: 'a@b.c', rol: 'ADMIN' },
     );
 
@@ -121,7 +122,7 @@ describe('AppointmentsService', () => {
     mockCount.mockResolvedValue(0);
 
     await service.listTurnos(
-      { cursor, direccion: 'siguiente', incluirCancelados: true },
+      { cursor, direccion: 'siguiente', soloPendientes: false },
       { sub: 'admin', mail: 'a@b.c', rol: 'ADMIN' },
     );
 
@@ -154,7 +155,7 @@ describe('AppointmentsService', () => {
     mockCount.mockResolvedValue(1);
 
     const result = await service.listTurnos(
-      { cursor, direccion: 'anterior', incluirCancelados: true },
+      { cursor, direccion: 'anterior', soloPendientes: false },
       { sub: 'admin', mail: 'a@b.c', rol: 'ADMIN' },
     );
 
@@ -191,7 +192,7 @@ describe('AppointmentsService', () => {
     ]);
 
     const result = await service.listTurnos(
-      { fecha: '2026-08-16', incluirCancelados: true },
+      { fecha: '2026-08-16', soloPendientes: false },
       { sub: 'admin', mail: 'a@b.c', rol: 'ADMIN' },
     );
 
@@ -225,7 +226,7 @@ describe('AppointmentsService', () => {
         fecha: '2026-08-16',
         cursor,
         direccion: 'siguiente',
-        incluirCancelados: true,
+        soloPendientes: false,
       },
       { sub: 'admin', mail: 'a@b.c', rol: 'ADMIN' },
     );
@@ -242,7 +243,7 @@ describe('AppointmentsService', () => {
     mockFindMany.mockResolvedValue([]);
 
     await service.listTurnos(
-      { fecha: '2026-08-16', medicoId: 'otro-id', incluirCancelados: true },
+      { fecha: '2026-08-16', medicoId: 'otro-id', soloPendientes: false },
       { sub: 'medico-propio', mail: 'm@x.c', rol: RolUsuario.MEDICO },
     );
 
@@ -259,7 +260,7 @@ describe('AppointmentsService', () => {
     mockFindMany.mockResolvedValue([]);
 
     const result = await service.listTurnos(
-      { fecha: '2026-08-16', incluirCancelados: true },
+      { fecha: '2026-08-16', soloPendientes: false },
       { sub: 'admin', mail: 'a@b.c', rol: 'ADMIN' },
     );
 
@@ -271,10 +272,30 @@ describe('AppointmentsService', () => {
   it('rechaza fecha inválida', async () => {
     await expect(
       service.listTurnos(
-        { fecha: '2026-13-40', incluirCancelados: true },
+        { fecha: '2026-13-40', soloPendientes: false },
         { sub: 'admin', mail: 'a@b.c', rol: 'ADMIN' },
       ),
     ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('soloPendientes filtra PROGRAMADO y CONFIRMADO', async () => {
+    mockFindMany.mockResolvedValue([]);
+    mockCount.mockResolvedValue(0);
+
+    await service.listTurnos(
+      { soloPendientes: true },
+      { sub: 'admin', mail: 'a@b.c', rol: 'ADMIN' },
+    );
+
+    expect(mockFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          estado: {
+            in: [EstadoTurno.PROGRAMADO, EstadoTurno.CONFIRMADO],
+          },
+        }) as Record<string, unknown>,
+      }),
+    );
   });
 });
 
@@ -317,7 +338,7 @@ describe('AppointmentsController', () => {
       cursorAnterior: null,
     });
 
-    const result = await controller.list({ incluirCancelados: true }, {
+    const result = await controller.list({ soloPendientes: false }, {
       user: { sub: 'u1', mail: 'a@b.c', rol: 'RECEPCIONISTA' },
     } as never);
 
@@ -327,7 +348,7 @@ describe('AppointmentsController', () => {
 
   it('exige usuario autenticado', () => {
     expect(() =>
-      controller.list({ incluirCancelados: true }, {} as never),
+      controller.list({ soloPendientes: false }, {} as never),
     ).toThrow(UnauthorizedException);
   });
 });

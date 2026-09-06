@@ -9,7 +9,7 @@ import type { TurnoListItemDto } from '@turnos/shared-types';
 import { useEffect, useMemo, useRef } from 'react';
 
 import '@/app/agenda-dia.css';
-import { filterTurnosDia, toCalendarEvent } from '@/lib/agenda/turno-dia-event';
+import { toCalendarEvent } from '@/lib/agenda/turno-dia-event';
 import {
   toAppliedFilters,
   toTurnosListQuery,
@@ -40,7 +40,7 @@ export function renderTurnoEventContent(arg: EventContentArg) {
 /**
  * Vista Día de la Agenda: selector de fecha + grilla horaria de 24hs.
  *
- * @param props - Params de URL (fecha, filtros, cancelados).
+ * @param props - Params de URL (fecha y filtros).
  * @returns Bloque de visualización del modo Día.
  */
 export function AgendaDia({ params }: AgendaDiaProps) {
@@ -55,6 +55,7 @@ export function AgendaDia({ params }: AgendaDiaProps) {
       appliedFilters.medicoId,
       appliedFilters.especialidadId,
       appliedFilters.pacienteId,
+      appliedFilters.soloPendientes,
     ],
     queryFn: () =>
       fetchTurnos(
@@ -62,14 +63,9 @@ export function AgendaDia({ params }: AgendaDiaProps) {
       ),
   });
 
-  const visibleItems = useMemo(
-    () => filterTurnosDia(query.data?.items ?? [], params.cancelados),
-    [query.data?.items, params.cancelados],
-  );
-
   const events = useMemo(
-    () => visibleItems.map(toCalendarEvent),
-    [visibleItems],
+    () => (query.data?.items ?? []).map(toCalendarEvent),
+    [query.data?.items],
   );
 
   useEffect(() => {
@@ -96,7 +92,9 @@ export function AgendaDia({ params }: AgendaDiaProps) {
   }, [query.isLoading, query.isError]);
 
   const showEmptyMessage =
-    !query.isLoading && !query.isError && visibleItems.length === 0;
+    !query.isLoading &&
+    !query.isError &&
+    (query.data?.items.length ?? 0) === 0;
 
   return (
     <div

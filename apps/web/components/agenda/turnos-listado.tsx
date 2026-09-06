@@ -32,7 +32,7 @@ type PageParam = {
 
 /**
  * Grilla de turnos con scroll infinito bidireccional (modo Lista).
- * Leaf client: useInfiniteQuery sin caché; filtra cancelados en memoria.
+ * Leaf client: useInfiniteQuery sin caché.
  *
  * @param props - Rol y params aplicados desde la URL.
  * @returns Tabla de turnos con paginación por cursor.
@@ -51,6 +51,7 @@ export function TurnosListado({ rol, params }: TurnosListadoProps) {
       appliedFilters.medicoId,
       appliedFilters.especialidadId,
       appliedFilters.pacienteId,
+      appliedFilters.soloPendientes,
     ],
     queryFn: ({ pageParam }) => {
       const page = pageParam as PageParam;
@@ -89,14 +90,6 @@ export function TurnosListado({ rol, params }: TurnosListadoProps) {
   const allItems = useMemo(
     () => data?.pages.flatMap((page) => page.items) ?? [],
     [data?.pages],
-  );
-
-  const visibleItems = useMemo(
-    () =>
-      params.cancelados
-        ? allItems
-        : allItems.filter((item) => item.estado !== 'CANCELADO'),
-    [allItems, params.cancelados],
   );
 
   const handleScroll = useCallback(() => {
@@ -153,7 +146,7 @@ export function TurnosListado({ rol, params }: TurnosListadoProps) {
     if (isLoading || isError || isFetching) {
       return;
     }
-    if (visibleItems.length > 0) {
+    if (allItems.length > 0) {
       return;
     }
     if (hasNextPage && !isFetchingNextPage) {
@@ -164,7 +157,7 @@ export function TurnosListado({ rol, params }: TurnosListadoProps) {
       void fetchPreviousPage();
     }
   }, [
-    visibleItems.length,
+    allItems.length,
     isLoading,
     isError,
     isFetching,
@@ -188,7 +181,7 @@ export function TurnosListado({ rol, params }: TurnosListadoProps) {
   const showEmptyMessage =
     !isLoading &&
     !isError &&
-    visibleItems.length === 0 &&
+    allItems.length === 0 &&
     !hasNextPage &&
     !hasPreviousPage &&
     !isFetchingNextPage &&
@@ -218,7 +211,7 @@ export function TurnosListado({ rol, params }: TurnosListadoProps) {
         </p>
       )}
 
-      {!isLoading && !isError && visibleItems.length > 0 && (
+      {!isLoading && !isError && allItems.length > 0 && (
         <>
           {/*
             Extension point: doble click en fila → detalle de turno (futura iteración).
@@ -237,7 +230,7 @@ export function TurnosListado({ rol, params }: TurnosListadoProps) {
               </tr>
             </thead>
             <tbody>
-              {visibleItems.map((turno) => (
+              {allItems.map((turno) => (
                 <tr
                   key={turno.id}
                   className="border-t border-border hover:bg-muted/50"

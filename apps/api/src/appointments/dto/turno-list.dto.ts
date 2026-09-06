@@ -52,13 +52,14 @@ export class ListTurnosQueryDto {
   pacienteId?: string;
 
   @ApiPropertyOptional({
-    description: 'Incluir turnos cancelados en la respuesta',
-    default: true,
+    description:
+      'Si es true, solo turnos PROGRAMADO o CONFIRMADO. Ausente o false: todos los estados',
+    default: false,
   })
   @IsOptional()
   @Transform(({ value }) => value === true || value === 'true')
   @IsBoolean()
-  incluirCancelados?: boolean;
+  soloPendientes?: boolean;
 
   @ApiPropertyOptional({ description: 'Cursor opaco de paginación' })
   @IsOptional()

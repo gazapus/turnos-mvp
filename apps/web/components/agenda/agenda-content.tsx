@@ -4,7 +4,7 @@ import type { AuthUser } from '@turnos/shared-types';
 import { Plus } from 'lucide-react';
 
 import type { ParsedAgendaParams } from '@/lib/agenda/url-params';
-import { AgendaCanceladosToggle } from './agenda-cancelados-toggle';
+import { AgendaPendientesToggle } from './agenda-pendientes-toggle';
 import { AgendaDia } from './agenda-dia';
 import { AgendaFiltrosForm } from './agenda-filtros-form';
 import { AgendaQueryProvider } from './agenda-query-provider';
@@ -45,12 +45,12 @@ export function AgendaContent({ user, params }: AgendaContentProps) {
           )}
         </div>
 
-        <AgendaFiltrosForm rol={user.rol} params={params} />
+        <AgendaFiltrosForm user={user} params={params} />
 
         <div className="flex flex-col">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <AgendaTabs params={params} />
-            <AgendaCanceladosToggle params={params} />
+            <AgendaPendientesToggle params={params} />
           </div>
 
           <div>

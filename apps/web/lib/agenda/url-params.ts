@@ -17,7 +17,7 @@ export type ParsedAgendaParams = {
   medicoId?: string;
   especialidadId?: string;
   pacienteId?: string;
-  cancelados: boolean;
+  soloPendientes: boolean;
   fecha: string;
 };
 
@@ -37,17 +37,18 @@ function firstParam(value: string | string[] | undefined): string | undefined {
 }
 
 /**
- * Determina el default de cancelados según rol.
+ * Default de "Solo Pendientes" según rol.
  *
  * @param rol - Rol del usuario autenticado.
- * @returns true para recepcionista/admin, false para médico.
+ * @returns true para médico; false para admin/recepcionista.
  */
-export function defaultCanceladosForRole(rol: AuthUser['rol']): boolean {
-  return rol === 'ADMIN' || rol === 'RECEPCIONISTA';
+export function defaultSoloPendientesForRole(rol: AuthUser['rol']): boolean {
+  return rol === 'MEDICO';
 }
 
 /**
  * Parsea searchParams de `/agenda` aplicando defaults por rol.
+ * El query param `cancelados` se ignora.
  *
  * @param searchParams - Query params de Next.js.
  * @param user - Usuario autenticado.
@@ -63,11 +64,11 @@ export function parseAgendaUrlParams(
       ? (vistaRaw as VistaAgenda)
       : 'lista';
 
-  const canceladosRaw = firstParam(searchParams.cancelados);
-  const cancelados =
-    canceladosRaw === undefined
-      ? defaultCanceladosForRole(user.rol)
-      : canceladosRaw === 'true';
+  const soloPendientesRaw = firstParam(searchParams.soloPendientes);
+  const soloPendientes =
+    soloPendientesRaw === undefined
+      ? defaultSoloPendientesForRole(user.rol)
+      : soloPendientesRaw === 'true';
 
   let medicoId = firstParam(searchParams.medicoId);
   if (user.rol === 'MEDICO') {
@@ -84,7 +85,7 @@ export function parseAgendaUrlParams(
     medicoId: medicoId || undefined,
     especialidadId: especialidadId || undefined,
     pacienteId: pacienteId || undefined,
-    cancelados,
+    soloPendientes,
     fecha,
   };
 }
@@ -112,7 +113,7 @@ export function serializeAgendaUrlParams(
   if (params.pacienteId) {
     search.set('pacienteId', params.pacienteId);
   }
-  search.set('cancelados', params.cancelados ? 'true' : 'false');
+  search.set('soloPendientes', params.soloPendientes ? 'true' : 'false');
   if (params.fecha) {
     search.set('fecha', params.fecha);
   }
@@ -133,7 +134,7 @@ export function buildAgendaHref(params: ParsedAgendaParams): string {
 }
 
 /**
- * Valor sentinel para la opción "Todos" en selects de filtro.
+ * Valor sentinel para la opción "Todos" en combobox de filtro.
  */
 export const AGENDA_FILTER_ALL = ALL_VALUE;
 
@@ -144,6 +145,7 @@ export type AppliedAgendaFilters = {
   medicoId?: string;
   especialidadId?: string;
   pacienteId?: string;
+  soloPendientes: boolean;
 };
 
 /**
@@ -159,6 +161,7 @@ export function toAppliedFilters(
     medicoId: params.medicoId,
     especialidadId: params.especialidadId,
     pacienteId: params.pacienteId,
+    soloPendientes: params.soloPendientes,
   };
 }
 
@@ -168,6 +171,7 @@ export function toAppliedFilters(
  * @param filters - Filtros aplicados.
  * @param cursor - Cursor opaco opcional.
  * @param direccion - Dirección de paginación.
+ * @param fecha - Día civil opcional.
  * @returns Query serializable.
  */
 export function toTurnosListQuery(
@@ -180,7 +184,7 @@ export function toTurnosListQuery(
     medicoId: filters.medicoId,
     especialidadId: filters.especialidadId,
     pacienteId: filters.pacienteId,
-    incluirCancelados: true,
+    soloPendientes: filters.soloPendientes,
     cursor,
     direccion,
     fecha,

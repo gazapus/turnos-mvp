@@ -2,7 +2,7 @@ import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { AgendaCanceladosToggle } from './agenda-cancelados-toggle';
+import { AgendaPendientesToggle } from './agenda-pendientes-toggle';
 
 const replace = vi.fn();
 
@@ -10,7 +10,7 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ replace }),
 }));
 
-describe('AgendaCanceladosToggle', () => {
+describe('AgendaPendientesToggle', () => {
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();
@@ -20,12 +20,12 @@ describe('AgendaCanceladosToggle', () => {
     replace.mockClear();
   });
 
-  it('refleja el valor inicial del param cancelados', () => {
+  it('refleja el valor inicial del param soloPendientes', () => {
     render(
-      <AgendaCanceladosToggle
+      <AgendaPendientesToggle
         params={{
           vista: 'lista',
-          cancelados: true,
+          soloPendientes: true,
           fecha: '2026-08-16',
         }}
       />,
@@ -34,13 +34,13 @@ describe('AgendaCanceladosToggle', () => {
     expect(screen.getByRole('checkbox')).toBeChecked();
   });
 
-  it('actualiza query param cancelados sin refetch implícito', async () => {
+  it('actualiza query param soloPendientes', async () => {
     const user = userEvent.setup();
     render(
-      <AgendaCanceladosToggle
+      <AgendaPendientesToggle
         params={{
           vista: 'lista',
-          cancelados: false,
+          soloPendientes: false,
           fecha: '2026-08-16',
         }}
       />,
@@ -49,7 +49,7 @@ describe('AgendaCanceladosToggle', () => {
     await user.click(screen.getByRole('checkbox'));
 
     expect(replace).toHaveBeenCalledWith(
-      '/agenda?cancelados=true&fecha=2026-08-16',
+      '/agenda?soloPendientes=true&fecha=2026-08-16',
     );
   });
 });

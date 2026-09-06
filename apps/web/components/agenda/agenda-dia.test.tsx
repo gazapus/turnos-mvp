@@ -82,18 +82,6 @@ const programado: TurnoListItemDto = {
   tipo: 'PRIMER_TURNO',
 };
 
-const cancelado: TurnoListItemDto = {
-  id: 't2',
-  fecha: '2026-08-16',
-  hora: '10:00',
-  horaFin: '10:30',
-  paciente: { nombre: 'Ana', apellido: 'López' },
-  medico: { nombre: 'Laura', apellido: 'Gómez' },
-  especialidad: { nombre: 'Clínica Médica' },
-  estado: 'CANCELADO',
-  tipo: 'CONTROL',
-};
-
 describe('toCalendarEvent', () => {
   it('mapea fecha, hora y horaFin a start/end', () => {
     const event = toCalendarEvent(programado);
@@ -122,7 +110,7 @@ describe('AgendaDia', () => {
       <AgendaDia
         params={{
           vista: 'dia',
-          cancelados: true,
+          soloPendientes: false,
           fecha: '2026-08-16',
         }}
       />,
@@ -150,7 +138,7 @@ describe('AgendaDia', () => {
       <AgendaDia
         params={{
           vista: 'dia',
-          cancelados: true,
+          soloPendientes: false,
           fecha: '2026-08-16',
         }}
       />,
@@ -167,9 +155,9 @@ describe('AgendaDia', () => {
     expect(calendar.className).toContain('flex-col');
   });
 
-  it('oculta turnos cancelados en memoria cuando cancelados es false', async () => {
+  it('consulta el backend con soloPendientes', async () => {
     mockFetchTurnos.mockResolvedValue({
-      items: [programado, cancelado],
+      items: [programado],
       cursorSiguiente: null,
       cursorAnterior: null,
     });
@@ -178,15 +166,19 @@ describe('AgendaDia', () => {
       <AgendaDia
         params={{
           vista: 'dia',
-          cancelados: false,
+          soloPendientes: true,
           fecha: '2026-08-16',
         }}
       />,
     );
 
     expect(await screen.findByText(/julio alarcón/i)).toBeInTheDocument();
-    expect(screen.queryByText(/laura gómez/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/ana lópez/i)).not.toBeInTheDocument();
+    expect(mockFetchTurnos).toHaveBeenCalledWith(
+      expect.objectContaining({
+        soloPendientes: true,
+        fecha: '2026-08-16',
+      }),
+    );
   });
 
   it('observa el contenedor y llama updateSize cuando cambia el tamaño', async () => {
@@ -216,7 +208,7 @@ describe('AgendaDia', () => {
       <AgendaDia
         params={{
           vista: 'dia',
-          cancelados: true,
+          soloPendientes: false,
           fecha: '2026-08-16',
         }}
       />,

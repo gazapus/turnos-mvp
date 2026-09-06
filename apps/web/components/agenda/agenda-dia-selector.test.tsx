@@ -26,7 +26,7 @@ describe('AgendaDiaSelector', () => {
       <AgendaDiaSelector
         params={{
           vista: 'dia',
-          cancelados: true,
+          soloPendientes: false,
           fecha: '2026-08-16',
         }}
       />,
@@ -43,7 +43,7 @@ describe('AgendaDiaSelector', () => {
       <AgendaDiaSelector
         params={{
           vista: 'dia',
-          cancelados: true,
+          soloPendientes: false,
           fecha: '2026-08-16',
         }}
       />,
@@ -51,13 +51,13 @@ describe('AgendaDiaSelector', () => {
 
     await user.click(screen.getByRole('button', { name: /día siguiente/i }));
     expect(replace).toHaveBeenCalledWith(
-      '/agenda?vista=dia&cancelados=true&fecha=2026-08-17',
+      '/agenda?vista=dia&soloPendientes=false&fecha=2026-08-17',
     );
 
     replace.mockClear();
     await user.click(screen.getByRole('button', { name: /día anterior/i }));
     expect(replace).toHaveBeenCalledWith(
-      '/agenda?vista=dia&cancelados=true&fecha=2026-08-15',
+      '/agenda?vista=dia&soloPendientes=false&fecha=2026-08-15',
     );
   });
 
@@ -67,7 +67,7 @@ describe('AgendaDiaSelector', () => {
       <AgendaDiaSelector
         params={{
           vista: 'dia',
-          cancelados: true,
+          soloPendientes: false,
           fecha: '2026-08-16',
         }}
       />,
@@ -75,7 +75,7 @@ describe('AgendaDiaSelector', () => {
 
     await user.click(screen.getByRole('button', { name: /^hoy$/i }));
     expect(replace).toHaveBeenCalledWith(
-      `/agenda?vista=dia&cancelados=true&fecha=${todayYmd()}`,
+      `/agenda?vista=dia&soloPendientes=false&fecha=${todayYmd()}`,
     );
   });
 });

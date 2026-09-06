@@ -2,7 +2,7 @@ import type { AuthUser } from '@turnos/shared-types';
 import { describe, expect, it } from 'vitest';
 
 import {
-  defaultCanceladosForRole,
+  defaultSoloPendientesForRole,
   parseAgendaUrlParams,
   serializeAgendaUrlParams,
 } from './url-params';
@@ -24,35 +24,44 @@ const medicoUser: AuthUser = {
 };
 
 describe('serializeAgendaUrlParams', () => {
-  it('incluye cancelados=true cuando el checkbox está marcado', () => {
+  it('incluye soloPendientes=true cuando el checkbox está marcado', () => {
     const search = serializeAgendaUrlParams({
       vista: 'lista',
-      cancelados: true,
+      soloPendientes: true,
       fecha: '2026-08-16',
     });
 
-    expect(search.get('cancelados')).toBe('true');
+    expect(search.get('soloPendientes')).toBe('true');
   });
 
-  it('incluye cancelados=false cuando el checkbox está desmarcado', () => {
+  it('incluye soloPendientes=false cuando el checkbox está desmarcado', () => {
     const search = serializeAgendaUrlParams({
       vista: 'lista',
-      cancelados: false,
+      soloPendientes: false,
       fecha: '2026-08-16',
     });
 
-    expect(search.get('cancelados')).toBe('false');
+    expect(search.get('soloPendientes')).toBe('false');
   });
 });
 
 describe('parseAgendaUrlParams', () => {
-  it('aplica default por rol cuando cancelados no está en la URL', () => {
-    expect(parseAgendaUrlParams({}, adminUser).cancelados).toBe(
-      defaultCanceladosForRole('ADMIN'),
+  it('aplica default por rol cuando soloPendientes no está en la URL', () => {
+    expect(parseAgendaUrlParams({}, adminUser).soloPendientes).toBe(
+      defaultSoloPendientesForRole('ADMIN'),
     );
-    expect(parseAgendaUrlParams({}, medicoUser).cancelados).toBe(
-      defaultCanceladosForRole('MEDICO'),
+    expect(parseAgendaUrlParams({}, medicoUser).soloPendientes).toBe(
+      defaultSoloPendientesForRole('MEDICO'),
     );
+  });
+
+  it('ignora el query param cancelados legado', () => {
+    expect(
+      parseAgendaUrlParams({ cancelados: 'true' }, medicoUser).soloPendientes,
+    ).toBe(true);
+    expect(
+      parseAgendaUrlParams({ cancelados: 'false' }, adminUser).soloPendientes,
+    ).toBe(false);
   });
 
   it('hidrata fecha desde la URL y defaulta a hoy si falta', () => {
@@ -65,17 +74,17 @@ describe('parseAgendaUrlParams', () => {
   });
 });
 
-describe('cancelados round-trip', () => {
-  it('preserva cancelados=false al serializar y parsear (regresión admin)', () => {
+describe('soloPendientes round-trip', () => {
+  it('preserva soloPendientes=true al serializar y parsear (regresión médico)', () => {
     const serialized = serializeAgendaUrlParams({
       vista: 'lista',
-      cancelados: false,
+      soloPendientes: true,
       fecha: '2026-08-16',
     });
 
     const record = Object.fromEntries(serialized.entries());
     const parsed = parseAgendaUrlParams(record, adminUser);
 
-    expect(parsed.cancelados).toBe(false);
+    expect(parsed.soloPendientes).toBe(true);
   });
 });
