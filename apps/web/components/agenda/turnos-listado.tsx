@@ -2,13 +2,7 @@
 
 import type { AuthRole } from '@turnos/shared-types';
 import { useInfiniteQuery } from '@tanstack/react-query';
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-} from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 
 import {
   toAppliedFilters,
@@ -27,22 +21,18 @@ type TurnosListadoProps = {
 
 type PageParam = {
   cursor?: string;
-  direccion?: 'siguiente' | 'anterior';
+  direccion?: 'siguiente';
 };
 
 /**
- * Grilla de turnos con scroll infinito bidireccional (modo Lista).
- * Leaf client: useInfiniteQuery sin caché.
+ * Grilla de turnos con scroll infinito hacia adelante (modo Lista).
+ * Leaf client: useInfiniteQuery anclado a hoy 00:00; no carga el pasado.
  *
  * @param props - Rol y params aplicados desde la URL.
  * @returns Tabla de turnos con paginación por cursor.
  */
 export function TurnosListado({ rol, params }: TurnosListadoProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const scrollSnapshotRef = useRef<{
-    scrollHeight: number;
-    scrollTop: number;
-  } | null>(null);
   const appliedFilters = useMemo(() => toAppliedFilters(params), [params]);
 
   const query = useInfiniteQuery({
@@ -68,10 +58,7 @@ export function TurnosListado({ rol, params }: TurnosListadoProps) {
       lastPage.cursorSiguiente
         ? { cursor: lastPage.cursorSiguiente, direccion: 'siguiente' as const }
         : undefined,
-    getPreviousPageParam: (firstPage) =>
-      firstPage.cursorAnterior
-        ? { cursor: firstPage.cursorAnterior, direccion: 'anterior' as const }
-        : undefined,
+    getPreviousPageParam: () => undefined,
   });
 
   const {
@@ -79,11 +66,8 @@ export function TurnosListado({ rol, params }: TurnosListadoProps) {
     isError,
     isFetching,
     isFetchingNextPage,
-    isFetchingPreviousPage,
     hasNextPage,
-    hasPreviousPage,
     fetchNextPage,
-    fetchPreviousPage,
     data,
   } = query;
 
@@ -104,43 +88,7 @@ export function TurnosListado({ rol, params }: TurnosListadoProps) {
         void fetchNextPage();
       }
     }
-    if (el.scrollTop <= threshold) {
-      if (hasPreviousPage && !isFetchingPreviousPage) {
-        scrollSnapshotRef.current = {
-          scrollHeight: el.scrollHeight,
-          scrollTop: el.scrollTop,
-        };
-        void fetchPreviousPage();
-      }
-    }
-  }, [
-    isFetching,
-    hasNextPage,
-    isFetchingNextPage,
-    fetchNextPage,
-    hasPreviousPage,
-    isFetchingPreviousPage,
-    fetchPreviousPage,
-  ]);
-
-  useLayoutEffect(() => {
-    if (isFetchingPreviousPage || scrollSnapshotRef.current === null) {
-      return;
-    }
-
-    const el = containerRef.current;
-    const snapshot = scrollSnapshotRef.current;
-    scrollSnapshotRef.current = null;
-
-    if (!el) {
-      return;
-    }
-
-    const heightDelta = el.scrollHeight - snapshot.scrollHeight;
-    if (heightDelta > 0) {
-      el.scrollTop = snapshot.scrollTop + heightDelta;
-    }
-  }, [isFetchingPreviousPage, data?.pages.length]);
+  }, [isFetching, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   useEffect(() => {
     if (isLoading || isError || isFetching) {
@@ -151,10 +99,6 @@ export function TurnosListado({ rol, params }: TurnosListadoProps) {
     }
     if (hasNextPage && !isFetchingNextPage) {
       void fetchNextPage();
-      return;
-    }
-    if (hasPreviousPage && !isFetchingPreviousPage) {
-      void fetchPreviousPage();
     }
   }, [
     allItems.length,
@@ -164,9 +108,6 @@ export function TurnosListado({ rol, params }: TurnosListadoProps) {
     hasNextPage,
     isFetchingNextPage,
     fetchNextPage,
-    hasPreviousPage,
-    isFetchingPreviousPage,
-    fetchPreviousPage,
   ]);
 
   useEffect(() => {
@@ -183,9 +124,7 @@ export function TurnosListado({ rol, params }: TurnosListadoProps) {
     !isError &&
     allItems.length === 0 &&
     !hasNextPage &&
-    !hasPreviousPage &&
-    !isFetchingNextPage &&
-    !isFetchingPreviousPage;
+    !isFetchingNextPage;
 
   return (
     <div
@@ -260,7 +199,7 @@ export function TurnosListado({ rol, params }: TurnosListadoProps) {
         </>
       )}
 
-      {(isFetchingNextPage || isFetchingPreviousPage) && (
+      {isFetchingNextPage && (
         <p className="py-2 text-center text-xs text-muted-foreground">
           Cargando más turnos…
         </p>

@@ -1,6 +1,6 @@
 ## Purpose
 
-Modo de visualización Lista de la Agenda: grilla de turnos con paginación por cursor bidireccional, representación visual de estado y tipo, acciones por rol (stub), contrato de backend `GET /api/turnos` y endpoints de soporte para filtros.
+Modo de visualización Lista de la Agenda: grilla de turnos con paginación por cursor solo hacia adelante, representación visual de estado y tipo, acciones por rol (stub), contrato de backend `GET /api/turnos` y endpoints de soporte para filtros.
 
 ## Requirements
 
@@ -60,9 +60,9 @@ El sistema SHALL mostrar en la columna "Acciones" botones de tipo icon-button fi
 - **WHEN** el usuario activa cualquier botón de la columna de acciones
 - **THEN** el sistema no cambia el estado del turno ni realiza ninguna llamada al backend
 
-### Requirement: Scroll infinito bidireccional anclado al día actual
+### Requirement: Scroll infinito solo hacia adelante anclado al día actual
 
-El sistema SHALL cargar los turnos del modo Lista en páginas de 30, sin `offset`/`page`, usando paginación por cursor. La primera consulta (sin interacción de scroll) MUST filtrar turnos con fecha de inicio mayor o igual a las 00:00 del día actual, ordenados ascendentemente. Al llegar el scroll al final de los resultados cargados, el sistema SHALL solicitar la siguiente página de turnos posteriores. Al llegar el scroll al inicio de los resultados cargados, el sistema SHALL solicitar la página anterior de turnos previos al día actual.
+El sistema SHALL cargar los turnos del modo Lista en páginas de 30, sin `offset`/`page`, usando paginación por cursor. La primera consulta (sin interacción de scroll) MUST filtrar turnos con fecha de inicio mayor o igual a las 00:00 del día actual, ordenados ascendentemente. Al llegar el scroll al final de los resultados cargados, el sistema SHALL solicitar la siguiente página de turnos posteriores. El sistema MUST NOT solicitar turnos con fecha de inicio anterior al día actual: ni al llegar el scroll al inicio de los resultados cargados, ni cuando la primera página no contiene ítems.
 
 #### Scenario: Primera carga de la Lista
 
@@ -74,10 +74,15 @@ El sistema SHALL cargar los turnos del modo Lista en páginas de 30, sin `offset
 - **WHEN** el usuario scrollea hasta el último turno cargado en la Lista
 - **THEN** el sistema solicita al backend hasta 30 turnos siguientes a los ya cargados, respetando los filtros activos, y los agrega al final de la grilla
 
-#### Scenario: Scroll hacia arriba carga turnos anteriores
+#### Scenario: Scroll hacia arriba no carga turnos anteriores
 
 - **WHEN** el usuario scrollea hasta el primer turno cargado en la Lista
-- **THEN** el sistema solicita al backend hasta 30 turnos anteriores a los ya cargados, respetando los filtros activos, y los agrega al inicio de la grilla
+- **THEN** el sistema no solicita turnos anteriores al día actual y no agrega filas al inicio de la grilla
+
+#### Scenario: Primera página vacía no rellena con el pasado
+
+- **WHEN** la primera consulta del modo Lista no devuelve turnos desde las 00:00 del día actual en adelante
+- **THEN** el sistema no solicita turnos previos al día actual y muestra el mensaje vacío existente
 
 ### Requirement: Contrato de backend para el listado de turnos
 
