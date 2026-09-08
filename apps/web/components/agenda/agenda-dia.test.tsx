@@ -1,4 +1,5 @@
 import { cleanup, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { TurnoListItemDto } from '@turnos/shared-types';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -23,12 +24,16 @@ vi.mock('next/navigation', () => ({
 }));
 
 vi.mock('@fullcalendar/timegrid', () => ({ default: {} }));
+vi.mock('@fullcalendar/interaction', () => ({ default: {} }));
 vi.mock('@fullcalendar/core/locales/es', () => ({ default: {} }));
 vi.mock('@fullcalendar/react', () => ({
   default: React.forwardRef(function FullCalendarMock(
     {
       events,
       eventContent,
+      dateClick,
+      eventClick,
+      slotDuration,
     }: {
       events: Array<{
         id: string;
@@ -37,8 +42,16 @@ vi.mock('@fullcalendar/react', () => ({
       eventContent: (arg: {
         event: { extendedProps: { turno: TurnoListItemDto } };
       }) => React.ReactNode;
+      dateClick?: (info: { date: Date }) => void;
+      eventClick?: (info: { event: { id: string } }) => void;
+      slotDuration?: string;
     },
-    ref: React.ForwardedRef<{ getApi: () => { updateSize: () => void; gotoDate: (date: string) => void } }>,
+    ref: React.ForwardedRef<{
+      getApi: () => {
+        updateSize: () => void;
+        gotoDate: (date: string) => void;
+      };
+    }>,
   ) {
     React.useImperativeHandle(ref, () => ({
       getApi: () => ({
@@ -48,9 +61,20 @@ vi.mock('@fullcalendar/react', () => ({
     }));
 
     return (
-      <div data-testid="fullcalendar-mock">
+      <div data-testid="fullcalendar-mock" data-slot-duration={slotDuration}>
+        <button
+          type="button"
+          data-testid="fc-empty-slot"
+          onClick={() => dateClick?.({ date: new Date(2026, 7, 16, 9, 45, 0) })}
+        >
+          hueco
+        </button>
         {events.map((event) => (
-          <div key={event.id}>
+          <div
+            key={event.id}
+            data-testid={`fc-event-${event.id}`}
+            onClick={() => eventClick?.({ event: { id: event.id } })}
+          >
             {eventContent({
               event: { extendedProps: event.extendedProps },
             })}
@@ -67,6 +91,34 @@ function renderWithQuery(ui: React.ReactElement) {
   });
   return render(
     <QueryClientProvider client={client}>{ui}</QueryClientProvider>,
+  );
+}
+
+const diaParams = {
+  vista: 'dia' as const,
+  soloPendientes: false,
+  fecha: '2026-08-16',
+};
+
+/**
+ * Render de AgendaDia con callbacks por defecto.
+ *
+ * @param props - Overrides opcionales.
+ * @returns Resultado de render.
+ */
+function renderDia(props?: {
+  canCreate?: boolean;
+  onCrearEnHueco?: (fecha: string, horaInicio: string) => void;
+  onAbrirTurno?: (turnoId: string) => void;
+  params?: typeof diaParams & { soloPendientes?: boolean };
+}) {
+  return renderWithQuery(
+    <AgendaDia
+      params={props?.params ?? diaParams}
+      canCreate={props?.canCreate ?? true}
+      onCrearEnHueco={props?.onCrearEnHueco ?? vi.fn()}
+      onAbrirTurno={props?.onAbrirTurno ?? vi.fn()}
+    />,
   );
 }
 
@@ -106,15 +158,7 @@ describe('AgendaDia', () => {
       cursorAnterior: null,
     });
 
-    renderWithQuery(
-      <AgendaDia
-        params={{
-          vista: 'dia',
-          soloPendientes: false,
-          fecha: '2026-08-16',
-        }}
-      />,
-    );
+    renderDia();
 
     expect(await screen.findByText(/julio alarcón/i)).toBeInTheDocument();
     expect(screen.getByText(/pepin gonzales/i)).toBeInTheDocument();
@@ -134,15 +178,7 @@ describe('AgendaDia', () => {
       cursorAnterior: null,
     });
 
-    renderWithQuery(
-      <AgendaDia
-        params={{
-          vista: 'dia',
-          soloPendientes: false,
-          fecha: '2026-08-16',
-        }}
-      />,
-    );
+    renderDia();
 
     const panel = await screen.findByTestId('agenda-dia');
     expect(panel.className).toContain('glass-panel-agenda');
@@ -162,15 +198,13 @@ describe('AgendaDia', () => {
       cursorAnterior: null,
     });
 
-    renderWithQuery(
-      <AgendaDia
-        params={{
-          vista: 'dia',
-          soloPendientes: true,
-          fecha: '2026-08-16',
-        }}
-      />,
-    );
+    renderDia({
+      params: {
+        vista: 'dia',
+        soloPendientes: true,
+        fecha: '2026-08-16',
+      },
+    });
 
     expect(await screen.findByText(/julio alarcón/i)).toBeInTheDocument();
     expect(mockFetchTurnos).toHaveBeenCalledWith(
@@ -204,15 +238,7 @@ describe('AgendaDia', () => {
       cursorAnterior: null,
     });
 
-    renderWithQuery(
-      <AgendaDia
-        params={{
-          vista: 'dia',
-          soloPendientes: false,
-          fecha: '2026-08-16',
-        }}
-      />,
-    );
+    renderDia();
 
     await screen.findByText(/julio alarcón/i);
 
@@ -225,5 +251,55 @@ describe('AgendaDia', () => {
     expect(mockUpdateSize).toHaveBeenCalled();
 
     vi.unstubAllGlobals();
+  });
+
+  it('usa slots de 15 minutos y abre alta al clickear un hueco', async () => {
+    const user = userEvent.setup();
+    const onCrearEnHueco = vi.fn();
+    mockFetchTurnos.mockResolvedValue({
+      items: [programado],
+      cursorSiguiente: null,
+      cursorAnterior: null,
+    });
+
+    renderDia({ onCrearEnHueco });
+
+    expect(await screen.findByTestId('fullcalendar-mock')).toHaveAttribute(
+      'data-slot-duration',
+      '00:15:00',
+    );
+
+    await user.click(screen.getByTestId('fc-empty-slot'));
+    expect(onCrearEnHueco).toHaveBeenCalledWith('2026-08-16', '09:45');
+  });
+
+  it('abre el detalle al clickear un evento', async () => {
+    const user = userEvent.setup();
+    const onAbrirTurno = vi.fn();
+    mockFetchTurnos.mockResolvedValue({
+      items: [programado],
+      cursorSiguiente: null,
+      cursorAnterior: null,
+    });
+
+    renderDia({ onAbrirTurno });
+
+    await user.click(await screen.findByTestId('fc-event-t1'));
+    expect(onAbrirTurno).toHaveBeenCalledWith('t1');
+  });
+
+  it('no abre alta por hueco si el usuario no puede crear', async () => {
+    const user = userEvent.setup();
+    const onCrearEnHueco = vi.fn();
+    mockFetchTurnos.mockResolvedValue({
+      items: [programado],
+      cursorSiguiente: null,
+      cursorAnterior: null,
+    });
+
+    renderDia({ canCreate: false, onCrearEnHueco });
+
+    await user.click(await screen.findByTestId('fc-empty-slot'));
+    expect(onCrearEnHueco).not.toHaveBeenCalled();
   });
 });

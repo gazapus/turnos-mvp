@@ -28,11 +28,19 @@ describe('EspecialidadesService', () => {
   });
 
   it('devuelve especialidades mapeadas a DTO mínimo', async () => {
-    mockFindMany.mockResolvedValue([{ id: 'e1', nombre: 'Cardiología' }]);
+    mockFindMany.mockResolvedValue([
+      {
+        id: 'e1',
+        nombre: 'Cardiología',
+        medicos: [{ medicoId: 'm1' }],
+      },
+    ]);
 
     const result = await service.findAll();
 
-    expect(result).toEqual([{ id: 'e1', nombre: 'Cardiología' }]);
+    expect(result).toEqual([
+      { id: 'e1', nombre: 'Cardiología', medicoIds: ['m1'] },
+    ]);
   });
 });
 

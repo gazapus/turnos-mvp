@@ -13,4 +13,13 @@ export class ListPacientesQueryDto {
   @IsOptional()
   @IsString()
   q?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Documento exacto (se normaliza a dígitos). Si está presente, se ignora `q` y se devuelve 0 o 1 paciente con contacto',
+    example: '20000001',
+  })
+  @IsOptional()
+  @IsString()
+  documento?: string;
 }

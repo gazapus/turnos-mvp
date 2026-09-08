@@ -10,6 +10,7 @@ import { AppBackground } from './app-background';
 import { AppNavbar } from './app-navbar';
 import { AppSidebar } from './app-sidebar';
 import { HelpBotButton } from './help-bot-button';
+import { FeedbackProvider } from '@/components/ui';
 
 type AppShellProps = {
   user: AuthUser;
@@ -78,7 +79,7 @@ export function AppShell({ user, children }: AppShellProps) {
       >
         <AppNavbar user={user} onOpenMobileNav={() => setMobileOpen(true)} />
         <div className="relative z-20 flex-1 overflow-y-auto p-6 max-md:p-3">
-          {children}
+          <FeedbackProvider>{children}</FeedbackProvider>
         </div>
         <HelpBotButton />
       </div>

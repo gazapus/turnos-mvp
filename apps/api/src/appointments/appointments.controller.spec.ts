@@ -1,7 +1,12 @@
-import { UnauthorizedException, BadRequestException } from '@nestjs/common';
+import {
+  UnauthorizedException,
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Test, TestingModule } from '@nestjs/testing';
-import { EstadoTurno, RolUsuario } from '@turnos/database';
+import { EstadoTurno, RolUsuario, TipoTurno } from '@turnos/database';
 import { AppointmentsController } from './appointments.controller';
 import { AppointmentsService } from './appointments.service';
 import { JwtAuthGuard } from '../auth';
@@ -9,6 +14,13 @@ import { startOfClinicDay } from './appointments.constants';
 
 const mockFindMany = jest.fn();
 const mockCount = jest.fn();
+const mockTurnoFindUnique = jest.fn();
+const mockTurnoCreate = jest.fn();
+const mockTurnoUpdate = jest.fn();
+const mockPacienteFindUnique = jest.fn();
+const mockPacienteCreate = jest.fn();
+const mockUsuarioFindUnique = jest.fn();
+const mockLinkFindUnique = jest.fn();
 
 /**
  * Primer argumento de la última invocación a prisma.turno.findMany.
@@ -20,8 +32,75 @@ function firstFindManyArg<T>(): T | undefined {
   return calls[0]?.[0];
 }
 
-jest.mock('@turnos/database', () => ({
-  prisma: {
+const FUTURE_FECHA = '2099-01-15';
+
+/**
+ * Body válido de alta/edición para tests.
+ *
+ * @param overrides - Campos a pisar.
+ * @returns DTO de upsert.
+ */
+function upsertBody(
+  overrides: Partial<Parameters<AppointmentsService['createTurno']>[0]> = {},
+) {
+  return {
+    paciente: {
+      documento: '20000001',
+      nombre: 'María',
+      apellido: 'González',
+    },
+    medicoId: 'med-1',
+    especialidadId: 'esp-1',
+    fecha: FUTURE_FECHA,
+    horaInicio: '10:00',
+    horaFin: '10:30',
+    tipo: TipoTurno.CONTROL,
+    notificarMail: false,
+    ...overrides,
+  };
+}
+
+/**
+ * Entidad Prisma mínima de detalle de turno.
+ *
+ * @param overrides - Campos a pisar.
+ * @returns Turno con relaciones.
+ */
+function detalleEntity(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 't1',
+    pacienteId: 'p1',
+    medicoId: 'med-1',
+    especialidadId: 'esp-1',
+    creadoPorId: 'u1',
+    fechaInicio: new Date('2099-01-15T13:00:00.000Z'),
+    fechaFin: new Date('2099-01-15T13:30:00.000Z'),
+    tipo: 'PRIMER_TURNO',
+    estado: 'PROGRAMADO',
+    notificarMail: false,
+    motivoCancelacion: null,
+    notificarWhatsapp: false,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    paciente: {
+      id: 'p1',
+      documento: '20000001',
+      nombre: 'María',
+      apellido: 'González',
+      telefono: null,
+      mail: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    medico: { nombre: 'Carlos', apellido: 'Médico' },
+    especialidad: { nombre: 'Cardiología' },
+    ...overrides,
+  };
+}
+
+jest.mock('@turnos/database', () => {
+  const prisma = {
+    $transaction: jest.fn(async (cb: (tx: unknown) => unknown) => cb(prisma)),
     turno: {
       get findMany() {
         return mockFindMany;
@@ -29,17 +108,62 @@ jest.mock('@turnos/database', () => ({
       get count() {
         return mockCount;
       },
+      get findUnique() {
+        return mockTurnoFindUnique;
+      },
+      get create() {
+        return mockTurnoCreate;
+      },
+      get update() {
+        return mockTurnoUpdate;
+      },
     },
-  },
-  EstadoTurno: {
-    CANCELADO: 'CANCELADO',
-    PROGRAMADO: 'PROGRAMADO',
-    CONFIRMADO: 'CONFIRMADO',
-  },
-  RolUsuario: {
-    MEDICO: 'MEDICO',
-  },
-}));
+    paciente: {
+      get findUnique() {
+        return mockPacienteFindUnique;
+      },
+      get create() {
+        return mockPacienteCreate;
+      },
+    },
+    usuario: {
+      get findUnique() {
+        return mockUsuarioFindUnique;
+      },
+    },
+    medicoEspecialidad: {
+      get findUnique() {
+        return mockLinkFindUnique;
+      },
+    },
+  };
+  return {
+    prisma,
+    EstadoTurno: {
+      CANCELADO: 'CANCELADO',
+      PROGRAMADO: 'PROGRAMADO',
+      CONFIRMADO: 'CONFIRMADO',
+      ATENDIDO: 'ATENDIDO',
+      AUSENTE: 'AUSENTE',
+    },
+    RolUsuario: {
+      MEDICO: 'MEDICO',
+      RECEPCIONISTA: 'RECEPCIONISTA',
+      ADMIN: 'ADMIN',
+    },
+    TipoTurno: {
+      PRIMER_TURNO: 'PRIMER_TURNO',
+      CONTROL: 'CONTROL',
+      SOBRETURNO: 'SOBRETURNO',
+      URGENTE: 'URGENTE',
+    },
+    Prisma: {
+      PrismaClientKnownRequestError: class extends Error {
+        code = 'P2002';
+      },
+    },
+  };
+});
 
 describe('AppointmentsService', () => {
   let service: AppointmentsService;
@@ -47,6 +171,13 @@ describe('AppointmentsService', () => {
   beforeEach(async () => {
     mockFindMany.mockReset();
     mockCount.mockReset();
+    mockTurnoFindUnique.mockReset();
+    mockTurnoCreate.mockReset();
+    mockTurnoUpdate.mockReset();
+    mockPacienteFindUnique.mockReset();
+    mockPacienteCreate.mockReset();
+    mockUsuarioFindUnique.mockReset();
+    mockLinkFindUnique.mockReset();
     const module: TestingModule = await Test.createTestingModule({
       providers: [AppointmentsService],
     }).compile();
@@ -297,14 +428,174 @@ describe('AppointmentsService', () => {
       }),
     );
   });
+
+  it('alta con paciente nuevo persiste PRIMER_TURNO', async () => {
+    mockPacienteFindUnique
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ id: 'p-new', mail: null });
+    mockPacienteCreate.mockResolvedValue({ id: 'p-new' });
+    mockUsuarioFindUnique.mockResolvedValue({
+      id: 'med-1',
+      rol: RolUsuario.MEDICO,
+      activo: true,
+    });
+    mockLinkFindUnique.mockResolvedValue({
+      medicoId: 'med-1',
+      especialidadId: 'esp-1',
+    });
+    mockCount.mockResolvedValue(0);
+    mockTurnoCreate.mockResolvedValue(
+      detalleEntity({ pacienteId: 'p-new', tipo: 'PRIMER_TURNO' }),
+    );
+
+    const result = await service.createTurno(upsertBody(), {
+      sub: 'recep-1',
+      mail: 'r@x.c',
+      rol: RolUsuario.RECEPCIONISTA,
+    });
+
+    expect(mockPacienteCreate).toHaveBeenCalled();
+    expect(mockTurnoCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          tipo: TipoTurno.PRIMER_TURNO,
+          estado: EstadoTurno.PROGRAMADO,
+          creadoPorId: 'recep-1',
+        }),
+      }),
+    );
+    expect(result.id).toBe('t1');
+    expect(result).not.toHaveProperty('passwordHash');
+  });
+
+  it('alta con paciente existente no lo vuelve a crear', async () => {
+    mockPacienteFindUnique
+      .mockResolvedValueOnce({
+        id: 'p1',
+        documento: '20000001',
+        mail: 'a@b.c',
+      })
+      .mockResolvedValueOnce({ id: 'p1', mail: 'a@b.c' });
+    mockUsuarioFindUnique.mockResolvedValue({
+      id: 'med-1',
+      rol: RolUsuario.MEDICO,
+      activo: true,
+    });
+    mockLinkFindUnique.mockResolvedValue({
+      medicoId: 'med-1',
+      especialidadId: 'esp-1',
+    });
+    mockCount.mockResolvedValue(2);
+    mockTurnoCreate.mockResolvedValue(
+      detalleEntity({ tipo: 'CONTROL' }),
+    );
+
+    await service.createTurno(upsertBody(), {
+      sub: 'recep-1',
+      mail: 'r@x.c',
+      rol: RolUsuario.RECEPCIONISTA,
+    });
+
+    expect(mockPacienteCreate).not.toHaveBeenCalled();
+    expect(mockTurnoCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ tipo: TipoTurno.CONTROL }),
+      }),
+    );
+  });
+
+  it('no crea el turno si falla el alta de paciente', async () => {
+    mockPacienteFindUnique.mockResolvedValue(null);
+    mockPacienteCreate.mockRejectedValue(new Error('db down'));
+
+    await expect(
+      service.createTurno(upsertBody(), {
+        sub: 'recep-1',
+        mail: 'r@x.c',
+        rol: RolUsuario.RECEPCIONISTA,
+      }),
+    ).rejects.toThrow('db down');
+    expect(mockTurnoCreate).not.toHaveBeenCalled();
+  });
+
+  it('médico no puede crear turnos', async () => {
+    await expect(
+      service.createTurno(upsertBody(), {
+        sub: 'medico-propio',
+        mail: 'm@x.c',
+        rol: RolUsuario.MEDICO,
+      }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('primera vez excluye el turno en edición', async () => {
+    mockCount.mockResolvedValue(0);
+    const result = await service.isPrimeraVez({
+      pacienteId: 'p1',
+      medicoId: 'med-1',
+      excluirTurnoId: 't1',
+    });
+    expect(result.primeraVez).toBe(true);
+    expect(mockCount).toHaveBeenCalledWith({
+      where: { pacienteId: 'p1', medicoId: 'med-1', id: { not: 't1' } },
+    });
+  });
+
+  it('GET detalle oculta turnos de otro médico', async () => {
+    mockTurnoFindUnique.mockResolvedValue(
+      detalleEntity({ medicoId: 'otro-medico' }),
+    );
+    await expect(
+      service.findById('t1', {
+        sub: 'medico-propio',
+        mail: 'm@x.c',
+        rol: RolUsuario.MEDICO,
+      }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('PATCH rechaza un turno que no está PROGRAMADO', async () => {
+    mockTurnoFindUnique.mockResolvedValue({
+      ...detalleEntity(),
+      estado: EstadoTurno.CONFIRMADO,
+      fechaInicio: new Date('2099-01-15T13:00:00.000Z'),
+    });
+
+    await expect(
+      service.updateTurno('t1', upsertBody(), {
+        sub: 'recep-1',
+        mail: 'r@x.c',
+        rol: RolUsuario.RECEPCIONISTA,
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(mockTurnoUpdate).not.toHaveBeenCalled();
+  });
+
+  it('PATCH rechaza un turno con fecha pasada', async () => {
+    await expect(
+      service.updateTurno(
+        't1',
+        upsertBody({ fecha: '2020-01-01' }),
+        {
+          sub: 'recep-1',
+          mail: 'r@x.c',
+          rol: RolUsuario.RECEPCIONISTA,
+        },
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(mockTurnoUpdate).not.toHaveBeenCalled();
+  });
 });
 
 describe('AppointmentsController', () => {
   let controller: AppointmentsController;
-  let service: { listTurnos: jest.Mock };
+  let service: { listTurnos: jest.Mock; createTurno: jest.Mock };
 
   beforeEach(async () => {
-    service = { listTurnos: jest.fn().mockResolvedValue({ items: [] }) };
+    service = {
+      listTurnos: jest.fn().mockResolvedValue({ items: [] }),
+      createTurno: jest.fn(),
+    };
     const module: TestingModule = await Test.createTestingModule({
       controllers: [AppointmentsController],
       providers: [
@@ -350,5 +641,13 @@ describe('AppointmentsController', () => {
     expect(() =>
       controller.list({ soloPendientes: false }, {} as never),
     ).toThrow(UnauthorizedException);
+  });
+
+  it('delega el alta al servicio', async () => {
+    service.createTurno.mockResolvedValue({ id: 't1' });
+    await controller.create(upsertBody(), {
+      user: { sub: 'u1', mail: 'a@b.c', rol: 'RECEPCIONISTA' },
+    } as never);
+    expect(service.createTurno).toHaveBeenCalled();
   });
 });

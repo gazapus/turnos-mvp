@@ -84,11 +84,48 @@ describe('PacientesService', () => {
       NotFoundException,
     );
   });
+
+  it('devuelve detalle por documento normalizado', async () => {
+    mockFindUnique.mockResolvedValue({
+      id: 'p1',
+      documento: '20000001',
+      nombre: 'María',
+      apellido: 'González',
+      telefono: '1123456789',
+      mail: 'maria@mail.com',
+    });
+
+    await expect(service.findByDocumento('20.000.001')).resolves.toEqual({
+      id: 'p1',
+      documento: '20000001',
+      nombre: 'María',
+      apellido: 'González',
+      telefono: '1123456789',
+      mail: 'maria@mail.com',
+    });
+    expect(mockFindUnique).toHaveBeenCalledWith({
+      where: { documento: '20000001' },
+    });
+  });
+
+  it('devuelve null si el documento no existe', async () => {
+    mockFindUnique.mockResolvedValue(null);
+    await expect(service.findByDocumento('999')).resolves.toBeNull();
+  });
+
+  it('devuelve null si el documento queda vacío al normalizar', async () => {
+    await expect(service.findByDocumento('---')).resolves.toBeNull();
+    expect(mockFindUnique).not.toHaveBeenCalled();
+  });
 });
 
 describe('PacientesController', () => {
   let controller: PacientesController;
-  let service: { search: jest.Mock; findById: jest.Mock };
+  let service: {
+    search: jest.Mock;
+    findById: jest.Mock;
+    findByDocumento: jest.Mock;
+  };
 
   beforeEach(async () => {
     service = {
@@ -98,6 +135,7 @@ describe('PacientesController', () => {
         nombre: 'María',
         apellido: 'González',
       }),
+      findByDocumento: jest.fn().mockResolvedValue(null),
     };
     const module: TestingModule = await Test.createTestingModule({
       controllers: [PacientesController],
@@ -121,5 +159,11 @@ describe('PacientesController', () => {
   it('delega getById al servicio', async () => {
     await controller.findById('p1');
     expect(service.findById).toHaveBeenCalledWith('p1');
+  });
+
+  it('busca por documento cuando el query trae documento', async () => {
+    await controller.list({ documento: '20.000.001' });
+    expect(service.findByDocumento).toHaveBeenCalledWith('20.000.001');
+    expect(service.search).not.toHaveBeenCalled();
   });
 });

@@ -6,6 +6,15 @@ type TurnoAccionesProps = {
 };
 
 /**
+ * Evita que el click en Acciones abra el detalle de la fila.
+ *
+ * @param event - Click en el contenedor de botones.
+ */
+function stopRowClick(event: { stopPropagation: () => void }): void {
+  event.stopPropagation();
+}
+
+/**
  * Botones de acción estáticos por rol (sin handlers funcionales).
  *
  * @param props - Rol del usuario autenticado.
@@ -23,7 +32,7 @@ const BOTON_ACCION_BASE =
 export function TurnoAcciones({ rol }: TurnoAccionesProps) {
   if (rol === 'MEDICO') {
     return (
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2" onClick={stopRowClick}>
         <button
           type="button"
           title="Llamar al paciente"
@@ -45,7 +54,7 @@ export function TurnoAcciones({ rol }: TurnoAccionesProps) {
   }
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2" onClick={stopRowClick}>
       <button
         type="button"
         title="Confirmar paciente"

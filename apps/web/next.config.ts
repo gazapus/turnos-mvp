@@ -6,6 +6,7 @@ const nextConfig: NextConfig = {
   transpilePackages: [
     '@fullcalendar/core',
     '@fullcalendar/daygrid',
+    '@fullcalendar/interaction',
     '@fullcalendar/react',
     '@fullcalendar/timegrid',
   ],

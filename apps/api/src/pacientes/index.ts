@@ -1,3 +1,3 @@
 export { PacientesModule } from './pacientes.module';
 export { PacientesService } from './pacientes.service';
-export { PacienteResponseDto } from './dto';
+export { PacienteResponseDto, PacienteDetalleResponseDto } from './dto';

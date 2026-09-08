@@ -111,7 +111,9 @@ describe('AgendaFiltrosForm', () => {
 
     const medicoInput = await screen.findByLabelText(/^médico$/i);
     await user.click(medicoInput);
-    await user.click(await screen.findByRole('option', { name: /médico,\s*carlos/i }));
+    await user.click(
+      await screen.findByRole('option', { name: /médico,\s*carlos/i }),
+    );
     await user.click(screen.getByRole('button', { name: /aplicar/i }));
 
     await waitFor(() => {

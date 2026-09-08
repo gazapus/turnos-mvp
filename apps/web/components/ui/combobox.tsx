@@ -30,12 +30,16 @@ type ComboboxProps = {
   selectedLabel?: string;
   placeholder?: string;
   disabled?: boolean;
+  invalid?: boolean;
   minQueryLength?: number;
   debounceMs?: number;
 };
 
 const INPUT_CLASS =
-  'w-full rounded-md border border-border bg-input py-2 pl-3 pr-9 text-sm text-input-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-60';
+  'w-full rounded-md border bg-input py-2 pl-3 pr-9 text-sm text-input-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:bg-input disabled:text-input-foreground disabled:opacity-100';
+
+const INPUT_VALID_CLASS = 'border-border';
+const INPUT_INVALID_CLASS = 'border-danger';
 
 const STATUS_SEARCHING = 'Buscando…';
 const STATUS_NO_MATCHES = 'Sin coincidencias';
@@ -55,6 +59,7 @@ export function Combobox({
   selectedLabel,
   placeholder = 'Todos',
   disabled = false,
+  invalid = false,
   minQueryLength = 0,
   debounceMs = 0,
 }: ComboboxProps) {
@@ -145,14 +150,7 @@ export function Combobox({
       cancelled = true;
       window.clearTimeout(handle);
     };
-  }, [
-    debounceMs,
-    fetchOptions,
-    isQuerying,
-    minQueryLength,
-    open,
-    query,
-  ]);
+  }, [debounceMs, fetchOptions, isQuerying, minQueryLength, open, query]);
 
   useEffect(() => {
     /**
@@ -261,7 +259,7 @@ export function Combobox({
         aria-autocomplete="list"
         disabled={disabled}
         placeholder={placeholder}
-        className={`${INPUT_CLASS} ${disabled ? '' : 'cursor-text'}`}
+        className={`${INPUT_CLASS} ${invalid ? INPUT_INVALID_CLASS : INPUT_VALID_CLASS} ${disabled ? '' : 'cursor-text'}`}
         value={inputValue}
         onChange={(event) => {
           const next = event.target.value;

@@ -147,3 +147,77 @@ export function clinicDayRangeFromYmd(
     end: startOfClinicDay(nextNoon),
   };
 }
+
+/**
+ * Hora local HH:mm (00:00–23:59).
+ */
+export const HM_PATTERN = /^([01]\d|2[0-3]):([0-5]\d)$/;
+
+/**
+ * Instante UTC equivalente a una fecha+hora civil de la clínica.
+ *
+ * @param ymd - Día YYYY-MM-DD.
+ * @param hm - Hora HH:mm.
+ * @returns Date o null si el input es inválido.
+ */
+export function clinicDateTimeFromYmdHm(
+  ymd: string,
+  hm: string,
+): Date | null {
+  const range = clinicDayRangeFromYmd(ymd);
+  const match = HM_PATTERN.exec(hm);
+  if (!range || !match) {
+    return null;
+  }
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  return new Date(range.start.getTime() + (hours * 60 + minutes) * 60_000);
+}
+
+/**
+ * Resuelve inicio/fin de un turno. Si hora fin es menor que inicio,
+ * la fecha de fin pasa al día civil siguiente.
+ *
+ * @param fecha - Día de inicio YYYY-MM-DD.
+ * @param horaInicio - HH:mm.
+ * @param horaFin - HH:mm.
+ * @returns Rango o null si es inválido o fin no es posterior a inicio.
+ */
+export function resolveTurnoDateRange(
+  fecha: string,
+  horaInicio: string,
+  horaFin: string,
+): { start: Date; end: Date } | null {
+  const start = clinicDateTimeFromYmdHm(fecha, horaInicio);
+  let end = clinicDateTimeFromYmdHm(fecha, horaFin);
+  if (!start || !end) {
+    return null;
+  }
+  if (end.getTime() < start.getTime()) {
+    end = new Date(end.getTime() + 24 * 60 * 60 * 1000);
+  }
+  if (end.getTime() <= start.getTime()) {
+    return null;
+  }
+  return { start, end };
+}
+
+/**
+ * Compara una fecha civil con el día de hoy en la clínica.
+ *
+ * @param ymd - Fecha YYYY-MM-DD.
+ * @returns true si ymd es anterior a hoy.
+ */
+export function isClinicDateBeforeToday(ymd: string): boolean {
+  return ymd < formatClinicDate(new Date());
+}
+
+/**
+ * Normaliza un documento a dígitos.
+ *
+ * @param raw - Valor ingresado.
+ * @returns Solo dígitos.
+ */
+export function normalizeDocumento(raw: string): string {
+  return raw.replace(/\D/g, '');
+}

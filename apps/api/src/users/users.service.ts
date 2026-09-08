@@ -18,6 +18,9 @@ export class UsersService {
         activo: true,
         rol: RolUsuario.MEDICO,
       },
+      include: {
+        especialidades: { select: { especialidadId: true } },
+      },
       orderBy: [{ apellido: 'asc' }, { nombre: 'asc' }],
     });
 

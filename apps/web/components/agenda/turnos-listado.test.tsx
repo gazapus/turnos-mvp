@@ -6,6 +6,7 @@ import {
   screen,
   waitFor,
 } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -92,7 +93,13 @@ describe('TurnosListado', () => {
       cursorAnterior: null,
     });
 
-    renderWithQuery(<TurnosListado rol="RECEPCIONISTA" params={listaParams} />);
+    renderWithQuery(
+      <TurnosListado
+        rol="RECEPCIONISTA"
+        params={listaParams}
+        onAbrirTurno={vi.fn()}
+      />,
+    );
 
     expect(await screen.findByText(/gonzález,\s*maría/i)).toBeInTheDocument();
     expect(screen.getByText(/fecha/i)).toBeInTheDocument();
@@ -115,6 +122,7 @@ describe('TurnosListado', () => {
           medicoId: 'm1',
           soloPendientes: true,
         }}
+        onAbrirTurno={vi.fn()}
       />,
     );
 
@@ -134,7 +142,13 @@ describe('TurnosListado', () => {
       cursorAnterior: 'c-prev',
     });
 
-    renderWithQuery(<TurnosListado rol="RECEPCIONISTA" params={listaParams} />);
+    renderWithQuery(
+      <TurnosListado
+        rol="RECEPCIONISTA"
+        params={listaParams}
+        onAbrirTurno={vi.fn()}
+      />,
+    );
 
     expect(
       await screen.findByText(
@@ -159,7 +173,13 @@ describe('TurnosListado', () => {
       cursorAnterior: 'c-prev',
     });
 
-    renderWithQuery(<TurnosListado rol="RECEPCIONISTA" params={listaParams} />);
+    renderWithQuery(
+      <TurnosListado
+        rol="RECEPCIONISTA"
+        params={listaParams}
+        onAbrirTurno={vi.fn()}
+      />,
+    );
 
     expect(await screen.findByText(/gonzález,\s*maría/i)).toBeInTheDocument();
 
@@ -186,7 +206,13 @@ describe('TurnosListado', () => {
       cursorAnterior: null,
     });
 
-    renderWithQuery(<TurnosListado rol="RECEPCIONISTA" params={listaParams} />);
+    renderWithQuery(
+      <TurnosListado
+        rol="RECEPCIONISTA"
+        params={listaParams}
+        onAbrirTurno={vi.fn()}
+      />,
+    );
 
     expect(await screen.findByText(/gonzález,\s*maría/i)).toBeInTheDocument();
     expect(mockFetchTurnos).toHaveBeenCalledTimes(1);
@@ -211,7 +237,13 @@ describe('TurnosListado', () => {
         cursorAnterior: 'c-next',
       });
 
-    renderWithQuery(<TurnosListado rol="RECEPCIONISTA" params={listaParams} />);
+    renderWithQuery(
+      <TurnosListado
+        rol="RECEPCIONISTA"
+        params={listaParams}
+        onAbrirTurno={vi.fn()}
+      />,
+    );
 
     expect(await screen.findByText(/gonzález,\s*maría/i)).toBeInTheDocument();
 
@@ -229,5 +261,31 @@ describe('TurnosListado', () => {
         direccion: 'siguiente',
       }),
     );
+  });
+
+  it('abre el detalle al clickear la fila y no al clickear Acciones', async () => {
+    const user = userEvent.setup();
+    const onAbrirTurno = vi.fn();
+    mockFetchTurnos.mockResolvedValue({
+      items: [listItem('t1')],
+      cursorSiguiente: null,
+      cursorAnterior: null,
+    });
+
+    renderWithQuery(
+      <TurnosListado
+        rol="RECEPCIONISTA"
+        params={listaParams}
+        onAbrirTurno={onAbrirTurno}
+      />,
+    );
+
+    await user.click(await screen.findByText(/gonzález,\s*maría/i));
+    expect(onAbrirTurno).toHaveBeenCalledTimes(1);
+    expect(onAbrirTurno).toHaveBeenCalledWith('t1');
+
+    onAbrirTurno.mockClear();
+    await user.click(screen.getByRole('button', { name: /cancelar turno/i }));
+    expect(onAbrirTurno).not.toHaveBeenCalled();
   });
 });

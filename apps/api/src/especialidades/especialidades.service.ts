@@ -14,6 +14,9 @@ export class EspecialidadesService {
    */
   async findAll(): Promise<EspecialidadResponseDto[]> {
     const especialidades = await prisma.especialidad.findMany({
+      include: {
+        medicos: { select: { medicoId: true } },
+      },
       orderBy: { nombre: 'asc' },
     });
 

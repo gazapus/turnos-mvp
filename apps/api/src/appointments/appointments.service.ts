@@ -1,23 +1,48 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
-import { EstadoTurno, prisma, Prisma, RolUsuario } from '@turnos/database';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import {
+  EstadoTurno,
+  prisma,
+  Prisma,
+  RolUsuario,
+  TipoTurno,
+} from '@turnos/database';
 import type { DireccionPaginacion } from '@turnos/shared-types';
 import type { JwtPayload } from '../auth';
 import {
   CURSOR_NIL_UUID,
   clinicDayRangeFromYmd,
+  formatClinicDate,
+  isClinicDateBeforeToday,
+  normalizeDocumento,
+  resolveTurnoDateRange,
   startOfClinicDay,
   UUID_V4_PATTERN,
 } from './appointments.constants';
 import {
   ListTurnosQueryDto,
+  PrimeraVezQueryDto,
+  PrimeraVezResponseDto,
+  TurnoDetalleResponseDto,
   TurnoListItemResponseDto,
   TurnosListResponseDto,
+  UpsertTurnoDto,
 } from './dto';
 
 const PAGE_SIZE = 30;
 
 const TURNO_LIST_INCLUDE = {
   paciente: { select: { nombre: true, apellido: true } },
+  medico: { select: { nombre: true, apellido: true } },
+  especialidad: { select: { nombre: true } },
+} as const;
+
+const TURNO_DETALLE_INCLUDE = {
+  paciente: true,
   medico: { select: { nombre: true, apellido: true } },
   especialidad: { select: { nombre: true } },
 } as const;
@@ -64,6 +89,396 @@ export class AppointmentsService {
     }
 
     return this.fetchInitialPage(filters);
+  }
+
+  /**
+   * Indica si el par paciente+médico no tiene turnos previos.
+   *
+   * @param query - IDs del par y turno a excluir en edición.
+   * @returns `{ primeraVez }`.
+   */
+  async isPrimeraVez(
+    query: PrimeraVezQueryDto,
+  ): Promise<PrimeraVezResponseDto> {
+    const where: Prisma.TurnoWhereInput = {
+      pacienteId: query.pacienteId,
+      medicoId: query.medicoId,
+    };
+    if (query.excluirTurnoId) {
+      where.id = { not: query.excluirTurnoId };
+    }
+    const count = await prisma.turno.count({ where });
+    const dto = new PrimeraVezResponseDto();
+    dto.primeraVez = count === 0;
+    return dto;
+  }
+
+  /**
+   * Obtiene el detalle de un turno para el popup.
+   *
+   * @param id - UUID del turno.
+   * @param user - Usuario autenticado.
+   * @returns DTO de detalle.
+   */
+  async findById(
+    id: string,
+    user: JwtPayload,
+  ): Promise<TurnoDetalleResponseDto> {
+    const turno = await prisma.turno.findUnique({
+      where: { id },
+      include: TURNO_DETALLE_INCLUDE,
+    });
+    if (!turno) {
+      throw new NotFoundException('Turno no encontrado');
+    }
+    if (user.rol === RolUsuario.MEDICO && turno.medicoId !== user.sub) {
+      throw new NotFoundException('Turno no encontrado');
+    }
+    return TurnoDetalleResponseDto.fromEntity(turno);
+  }
+
+  /**
+   * Crea un turno y, si hace falta, el paciente, en una transacción.
+   *
+   * @param dto - Datos de alta.
+   * @param user - Usuario autenticado.
+   * @returns Detalle del turno creado.
+   */
+  async createTurno(
+    dto: UpsertTurnoDto,
+    user: JwtPayload,
+  ): Promise<TurnoDetalleResponseDto> {
+    this.assertCanWrite(user);
+    this.assertFechaNotPast(dto.fecha);
+    const range = this.requireDateRange(dto);
+
+    const created = await prisma.$transaction(async (tx) => {
+      const pacienteId = await this.resolvePacienteId(tx, dto);
+      await this.assertMedicoEspecialidad(tx, dto.medicoId, dto.especialidadId);
+      const tipo = await this.resolveTipoForCreate(tx, dto, pacienteId);
+      const notificarMail = await this.resolveNotificarMail(
+        tx,
+        pacienteId,
+        dto.notificarMail,
+      );
+
+      return tx.turno.create({
+        data: {
+          pacienteId,
+          medicoId: dto.medicoId,
+          especialidadId: dto.especialidadId,
+          creadoPorId: user.sub,
+          fechaInicio: range.start,
+          fechaFin: range.end,
+          tipo,
+          estado: EstadoTurno.PROGRAMADO,
+          notificarMail,
+        },
+        include: TURNO_DETALLE_INCLUDE,
+      });
+    });
+
+    return TurnoDetalleResponseDto.fromEntity(created);
+  }
+
+  /**
+   * Actualiza un turno PROGRAMADO con fecha ≥ hoy.
+   *
+   * @param id - UUID del turno.
+   * @param dto - Datos de edición.
+   * @param user - Usuario autenticado.
+   * @returns Detalle actualizado.
+   */
+  async updateTurno(
+    id: string,
+    dto: UpsertTurnoDto,
+    user: JwtPayload,
+  ): Promise<TurnoDetalleResponseDto> {
+    this.assertCanWrite(user);
+    this.assertFechaNotPast(dto.fecha);
+    const range = this.requireDateRange(dto);
+
+    const updated = await prisma.$transaction(async (tx) => {
+      const existing = await tx.turno.findUnique({ where: { id } });
+      if (!existing) {
+        throw new NotFoundException('Turno no encontrado');
+      }
+      if (existing.estado !== EstadoTurno.PROGRAMADO) {
+        throw new BadRequestException(
+          'Solo se pueden editar turnos en estado Programado',
+        );
+      }
+      if (isClinicDateBeforeToday(formatClinicDate(existing.fechaInicio))) {
+        throw new BadRequestException(
+          'No se puede guardar un turno con fecha anterior a hoy',
+        );
+      }
+
+      const pacienteId = await this.resolvePacienteId(tx, dto);
+      await this.assertMedicoEspecialidad(tx, dto.medicoId, dto.especialidadId);
+      const tipo = await this.resolveTipoForUpdate(
+        tx,
+        dto,
+        pacienteId,
+        existing.tipo,
+        id,
+      );
+      const notificarMail = await this.resolveNotificarMail(
+        tx,
+        pacienteId,
+        dto.notificarMail,
+      );
+
+      return tx.turno.update({
+        where: { id },
+        data: {
+          pacienteId,
+          medicoId: dto.medicoId,
+          especialidadId: dto.especialidadId,
+          fechaInicio: range.start,
+          fechaFin: range.end,
+          tipo,
+          notificarMail,
+        },
+        include: TURNO_DETALLE_INCLUDE,
+      });
+    });
+
+    return TurnoDetalleResponseDto.fromEntity(updated);
+  }
+
+  /**
+   * Prohíbe escritura al rol médico.
+   *
+   * @param user - JWT.
+   */
+  private assertCanWrite(user: JwtPayload): void {
+    if (user.rol === RolUsuario.MEDICO) {
+      throw new ForbiddenException('No autorizado');
+    }
+  }
+
+  /**
+   * Rechaza fechas civiles anteriores a hoy.
+   *
+   * @param fecha - YYYY-MM-DD.
+   */
+  private assertFechaNotPast(fecha: string): void {
+    if (isClinicDateBeforeToday(fecha)) {
+      throw new BadRequestException(
+        'No se puede guardar un turno con fecha anterior a hoy',
+      );
+    }
+  }
+
+  /**
+   * Convierte fecha y horas del DTO a instantes UTC.
+   *
+   * @param dto - Body de alta/edición.
+   * @returns Rango inicio/fin.
+   */
+  private requireDateRange(dto: UpsertTurnoDto): { start: Date; end: Date } {
+    const range = resolveTurnoDateRange(dto.fecha, dto.horaInicio, dto.horaFin);
+    if (!range) {
+      throw new BadRequestException(
+        'La hora de fin debe ser posterior a la hora de inicio',
+      );
+    }
+    return range;
+  }
+
+  /**
+   * Resuelve el paciente persistido: id existente o alta por documento.
+   *
+   * @param tx - Cliente transaccional.
+   * @param dto - Body.
+   * @returns UUID del paciente.
+   */
+  private async resolvePacienteId(
+    tx: Prisma.TransactionClient,
+    dto: UpsertTurnoDto,
+  ): Promise<string> {
+    if (dto.paciente) {
+      const documento = normalizeDocumento(dto.paciente.documento);
+      if (!documento) {
+        throw new BadRequestException('Documento inválido');
+      }
+      const found = await tx.paciente.findUnique({ where: { documento } });
+      if (found) {
+        return found.id;
+      }
+      try {
+        const created = await tx.paciente.create({
+          data: {
+            documento,
+            nombre: dto.paciente.nombre.trim(),
+            apellido: dto.paciente.apellido.trim(),
+            telefono: this.normalizeOptionalPhone(dto.paciente.telefono),
+            mail: this.normalizeOptionalMail(dto.paciente.mail),
+          },
+        });
+        return created.id;
+      } catch (error) {
+        if (
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === 'P2002'
+        ) {
+          const raced = await tx.paciente.findUnique({ where: { documento } });
+          if (raced) {
+            return raced.id;
+          }
+        }
+        throw error;
+      }
+    }
+
+    if (!dto.pacienteId) {
+      throw new BadRequestException(
+        'Debe indicar el paciente o los datos para darlo de alta',
+      );
+    }
+
+    const existing = await tx.paciente.findUnique({
+      where: { id: dto.pacienteId },
+    });
+    if (!existing) {
+      throw new NotFoundException('Paciente no encontrado');
+    }
+    return existing.id;
+  }
+
+  /**
+   * Verifica que el médico atienda la especialidad.
+   *
+   * @param tx - Cliente transaccional.
+   * @param medicoId - UUID del médico.
+   * @param especialidadId - UUID de la especialidad.
+   */
+  private async assertMedicoEspecialidad(
+    tx: Prisma.TransactionClient,
+    medicoId: string,
+    especialidadId: string,
+  ): Promise<void> {
+    const medico = await tx.usuario.findUnique({ where: { id: medicoId } });
+    if (!medico || medico.rol !== RolUsuario.MEDICO || !medico.activo) {
+      throw new BadRequestException('Médico inválido');
+    }
+    const link = await tx.medicoEspecialidad.findUnique({
+      where: {
+        medicoId_especialidadId: { medicoId, especialidadId },
+      },
+    });
+    if (!link) {
+      throw new BadRequestException(
+        'El médico no atiende la especialidad seleccionada',
+      );
+    }
+  }
+
+  /**
+   * Tipo de alta: Urgente pisa; si no, Primer turno o Control.
+   *
+   * @param tx - Cliente transaccional.
+   * @param dto - Body.
+   * @param pacienteId - Paciente resuelto.
+   * @returns Tipo a persistir.
+   */
+  private async resolveTipoForCreate(
+    tx: Prisma.TransactionClient,
+    dto: UpsertTurnoDto,
+    pacienteId: string,
+  ): Promise<TipoTurno> {
+    if (dto.tipo === TipoTurno.URGENTE) {
+      return TipoTurno.URGENTE;
+    }
+    const count = await tx.turno.count({
+      where: { pacienteId, medicoId: dto.medicoId },
+    });
+    return count === 0 ? TipoTurno.PRIMER_TURNO : TipoTurno.CONTROL;
+  }
+
+  /**
+   * Tipo de edición: Sobreturno se conserva si no lo cambiaron; Urgente pisa;
+   * Control/Primer turno se recalculan.
+   *
+   * @param tx - Cliente transaccional.
+   * @param dto - Body.
+   * @param pacienteId - Paciente resuelto.
+   * @param tipoActual - Tipo persistido.
+   * @param turnoId - Turno en edición.
+   * @returns Tipo a persistir.
+   */
+  private async resolveTipoForUpdate(
+    tx: Prisma.TransactionClient,
+    dto: UpsertTurnoDto,
+    pacienteId: string,
+    tipoActual: TipoTurno,
+    turnoId: string,
+  ): Promise<TipoTurno> {
+    if (dto.tipo === TipoTurno.URGENTE) {
+      return TipoTurno.URGENTE;
+    }
+    if (dto.tipo === TipoTurno.SOBRETURNO) {
+      return tipoActual === TipoTurno.SOBRETURNO
+        ? TipoTurno.SOBRETURNO
+        : TipoTurno.CONTROL;
+    }
+    const count = await tx.turno.count({
+      where: {
+        pacienteId,
+        medicoId: dto.medicoId,
+        id: { not: turnoId },
+      },
+    });
+    return count === 0 ? TipoTurno.PRIMER_TURNO : TipoTurno.CONTROL;
+  }
+
+  /**
+   * Notificar solo si el paciente tiene mail.
+   *
+   * @param tx - Cliente transaccional.
+   * @param pacienteId - Paciente.
+   * @param requested - Valor del formulario.
+   * @returns Flag persistido.
+   */
+  private async resolveNotificarMail(
+    tx: Prisma.TransactionClient,
+    pacienteId: string,
+    requested: boolean,
+  ): Promise<boolean> {
+    if (!requested) {
+      return false;
+    }
+    const paciente = await tx.paciente.findUnique({
+      where: { id: pacienteId },
+      select: { mail: true },
+    });
+    return Boolean(paciente?.mail);
+  }
+
+  /**
+   * Teléfono opcional: solo dígitos o null.
+   *
+   * @param value - Valor crudo.
+   * @returns Teléfono o null.
+   */
+  private normalizeOptionalPhone(value?: string | null): string | null {
+    if (!value) {
+      return null;
+    }
+    const digits = value.replace(/\D/g, '');
+    return digits.length > 0 ? digits.slice(0, 15) : null;
+  }
+
+  /**
+   * Mail opcional recortado o null.
+   *
+   * @param value - Valor crudo.
+   * @returns Mail o null.
+   */
+  private normalizeOptionalMail(value?: string | null): string | null {
+    const trimmed = value?.trim() ?? '';
+    return trimmed.length > 0 ? trimmed : null;
   }
 
   /**

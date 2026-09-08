@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { prisma } from '@turnos/database';
-import { PacienteResponseDto } from './dto';
+import { PacienteDetalleResponseDto, PacienteResponseDto } from './dto';
 import {
   escapeLikePattern,
   foldDiacritics,
@@ -10,6 +10,7 @@ import {
 import {
   PACIENTE_SEARCH_LIMIT,
   PACIENTE_SEARCH_MIN_LENGTH,
+  normalizeDocumento,
 } from './pacientes.constants';
 
 type PacienteSearchRow = {
@@ -73,5 +74,31 @@ export class PacientesService {
     }
 
     return PacienteResponseDto.fromEntity(paciente);
+  }
+
+  /**
+   * Busca un paciente por documento normalizado (solo dígitos).
+   * Un miss no es error: devuelve null.
+   *
+   * @param documentoRaw - Documento tipado por el usuario.
+   * @returns Detalle con contacto, o null si no hay padrón.
+   */
+  async findByDocumento(
+    documentoRaw: string,
+  ): Promise<PacienteDetalleResponseDto | null> {
+    const documento = normalizeDocumento(documentoRaw);
+    if (!documento) {
+      return null;
+    }
+
+    const paciente = await prisma.paciente.findUnique({
+      where: { documento },
+    });
+
+    if (!paciente) {
+      return null;
+    }
+
+    return PacienteDetalleResponseDto.fromEntity(paciente);
   }
 }

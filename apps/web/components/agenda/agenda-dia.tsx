@@ -1,7 +1,10 @@
 'use client';
 
-import type { EventContentArg } from '@fullcalendar/core';
+import type { EventClickArg, EventContentArg } from '@fullcalendar/core';
 import esLocale from '@fullcalendar/core/locales/es';
+import interactionPlugin, {
+  type DateClickArg,
+} from '@fullcalendar/interaction';
 import FullCalendar from '@fullcalendar/react';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import { useQuery } from '@tanstack/react-query';
@@ -21,6 +24,9 @@ import { TurnoDiaCard } from './turno-dia-card';
 
 type AgendaDiaProps = {
   params: ParsedAgendaParams;
+  canCreate: boolean;
+  onCrearEnHueco: (fecha: string, horaInicio: string) => void;
+  onAbrirTurno: (turnoId: string) => void;
 };
 
 /**
@@ -40,10 +46,15 @@ export function renderTurnoEventContent(arg: EventContentArg) {
 /**
  * Vista Día de la Agenda: selector de fecha + grilla horaria de 24hs.
  *
- * @param props - Params de URL (fecha y filtros).
+ * @param props - Params de URL, permisos de alta y callbacks de popup.
  * @returns Bloque de visualización del modo Día.
  */
-export function AgendaDia({ params }: AgendaDiaProps) {
+export function AgendaDia({
+  params,
+  canCreate,
+  onCrearEnHueco,
+  onAbrirTurno,
+}: AgendaDiaProps) {
   const calendarRef = useRef<FullCalendar>(null);
   const calendarContainerRef = useRef<HTMLDivElement>(null);
   const appliedFilters = useMemo(() => toAppliedFilters(params), [params]);
@@ -92,9 +103,30 @@ export function AgendaDia({ params }: AgendaDiaProps) {
   }, [query.isLoading, query.isError]);
 
   const showEmptyMessage =
-    !query.isLoading &&
-    !query.isError &&
-    (query.data?.items.length ?? 0) === 0;
+    !query.isLoading && !query.isError && (query.data?.items.length ?? 0) === 0;
+
+  /**
+   * Abre el alta en el segmento de 15 min clickeado (recep/admin).
+   *
+   * @param info - Click en un hueco de FullCalendar.
+   */
+  function handleDateClick(info: DateClickArg): void {
+    if (!canCreate) {
+      return;
+    }
+    const hours = String(info.date.getHours()).padStart(2, '0');
+    const minutes = String(info.date.getMinutes()).padStart(2, '0');
+    onCrearEnHueco(params.fecha, `${hours}:${minutes}`);
+  }
+
+  /**
+   * Abre el detalle del turno clickeado en la grilla.
+   *
+   * @param info - Click en un evento de FullCalendar.
+   */
+  function handleEventClick(info: EventClickArg): void {
+    onAbrirTurno(info.event.id);
+  }
 
   return (
     <div
@@ -130,7 +162,7 @@ export function AgendaDia({ params }: AgendaDiaProps) {
             <div className="min-h-0 flex-1">
               <FullCalendar
                 ref={calendarRef}
-                plugins={[timeGridPlugin]}
+                plugins={[timeGridPlugin, interactionPlugin]}
                 initialView="timeGridDay"
                 initialDate={params.fecha}
                 locale={esLocale}
@@ -141,7 +173,8 @@ export function AgendaDia({ params }: AgendaDiaProps) {
                 scrollTimeReset
                 slotMinTime="00:00:00"
                 slotMaxTime="24:00:00"
-                slotDuration="01:00:00"
+                slotDuration="00:15:00"
+                slotLabelInterval="01:00:00"
                 slotLabelFormat={{
                   hour: '2-digit',
                   minute: '2-digit',
@@ -151,6 +184,8 @@ export function AgendaDia({ params }: AgendaDiaProps) {
                 height="100%"
                 events={events}
                 eventContent={renderTurnoEventContent}
+                dateClick={handleDateClick}
+                eventClick={handleEventClick}
               />
             </div>
           )}

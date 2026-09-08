@@ -14,13 +14,12 @@ Zona horaria de clínica: `America/Argentina/Buenos_Aires` (`CLINIC_TIMEZONE`), 
 - Escritura de turnos y alta silenciosa de paciente desde recepción/admin.
 - Lookup por documento, cruce médico↔especialidad, tipo Control/Urgente con Primer turno automático.
 - Primitivas genéricas de toast de éxito y dialog de error.
-- Click en hueco Día (15 min) y click en card Día; botón "Nuevo Turno" del layout.
+- Click en hueco Día (15 min), click en card Día y click en fila de Lista; botón "Nuevo Turno" del layout.
 
 **Non-Goals:**
 
 - Colisiones, advertencia de sobreturno y tipo `SOBRETURNO` automático.
-- Efecto real de Confirmar, Anular o Llamar (siguen stubs; ciclo de vida en otro change).
-- Abrir el popup desde el modo Lista (filas y columna Acciones no cambian).
+- Efecto real de Confirmar, Anular o Llamar (siguen stubs en el popup y en la columna Acciones; ciclo de vida en otro change).
 - Edición de datos de un paciente ya persistido (campos locked si el documento existe).
 - Checkbox WhatsApp.
 - Semana/Mes.
@@ -30,7 +29,7 @@ Zona horaria de clínica: `America/Argentina/Buenos_Aires` (`CLINIC_TIMEZONE`), 
 
 ### 1. Estado del popup en `AgendaContent`, no en cada vista
 
-Un leaf `TurnoFormDialog` montado en `AgendaContent` (junto al botón "Nuevo Turno"). La vista Día no posee el dialog: notifica intención (`onCrearEnHueco`, `onAbrirTurno`) hacia arriba.
+Un leaf `TurnoFormDialog` montado en `AgendaContent` (junto al botón "Nuevo Turno"). Lista y Día no poseen el dialog: notifican intención (`onCrearEnHueco`, `onAbrirTurno`) hacia arriba.
 
 Modo:
 
@@ -38,7 +37,10 @@ Modo:
 | --- | --- | --- |
 | Botón Nuevo Turno | Nuevo Turno | vacío; tipo Control |
 | `dateClick` en Día | Nuevo Turno | fecha del día + hora del slot 15 min; fin = inicio + 30 min |
+| Click en fila de Lista | Detalle de Turno | `GET /api/turnos/:id` |
 | `eventClick` en card Día | Detalle de Turno | `GET /api/turnos/:id` |
+
+Click en la fila de Lista (cualquier celda salvo la columna Acciones) abre el detalle. Los icon-buttons de Acciones MUST `stopPropagation` y siguen siendo stubs: no abren el popup ni mutan el turno.
 
 Al cerrar (X, Salir o éxito de alta) se destruye el estado: el próximo open no retiene valores. Sin confirmación de descartar cambios.
 

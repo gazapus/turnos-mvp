@@ -39,9 +39,9 @@
   overflow: hidden !important;
 }
 
-/* Default de FullCalendar: 1.5em. 4.5em previo + 50% → 6.75em. */
+/* 15 min slots: 4 × 1.6875em = 6.75em por hora (mismo alto que antes). */
 .agenda-dia-calendar .fc .fc-timegrid-slot {
-  height: 6.75em;
+  height: 1.6875em;
 }
 
 /* Quita el margen lateral default de FullCalendar (2px / 2.5%) */

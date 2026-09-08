@@ -83,6 +83,8 @@
   --glass-blur: 40px;
   --glass-saturate: 180%;
   --glass-agenda-bg: rgba(255, 255, 255, 0.95);
+  --glass-form-bg: rgba(255, 255, 255, 0.58);
+  --glass-form-section-bg: rgba(255, 255, 255, 0.79);
   --glass-agenda-blur: 100px;
   --glass-shadow:
     inset 0 0 0 1px rgba(255, 255, 255, 0.1), 0 8px 32px 0 rgba(0, 0, 0, 0.1);
@@ -171,6 +173,7 @@
   --spacing-sidebar-logo: var(--sidebar-logo-height);
 
   --color-glass-bg: var(--glass-bg);
+  --color-glass-form-section-bg: var(--glass-form-section-bg);
   --color-glass-bg-mobile: var(--glass-bg-mobile);
   --color-glass-border: var(--glass-border);
   --color-shell-bg-overlay: var(--shell-bg-overlay);

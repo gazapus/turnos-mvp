@@ -81,20 +81,22 @@ export type TurnoListItemDto = {
 };
 
 /**
- * Opción de médico para combos de filtro.
+ * Opción de médico para combos de filtro y del formulario de turno.
  */
 export type MedicoOption = {
   id: string;
   nombre: string;
   apellido: string;
+  especialidadIds: string[];
 };
 
 /**
- * Opción de especialidad para combos de filtro.
+ * Opción de especialidad para combos de filtro y del formulario de turno.
  */
 export type EspecialidadOption = {
   id: string;
   nombre: string;
+  medicoIds: string[];
 };
 
 /**
@@ -104,6 +106,79 @@ export type PacienteOption = {
   id: string;
   nombre: string;
   apellido: string;
+};
+
+/**
+ * Paciente con documento y contacto para el popup de turno.
+ */
+export type PacienteDetalleDto = {
+  id: string;
+  documento: string;
+  nombre: string;
+  apellido: string;
+  telefono: string | null;
+  mail: string | null;
+};
+
+/**
+ * Datos de paciente nuevo enviados junto al alta o edición de turno.
+ */
+export type PacienteAltaDto = {
+  documento: string;
+  nombre: string;
+  apellido: string;
+  telefono?: string | null;
+  mail?: string | null;
+};
+
+/**
+ * Detalle de turno para hidratar el popup.
+ */
+export type TurnoDetalleDto = {
+  id: string;
+  paciente: PacienteDetalleDto;
+  medicoId: string;
+  medico: PersonaNombreDto;
+  especialidadId: string;
+  especialidad: EspecialidadNombreDto;
+  fecha: string;
+  horaInicio: string;
+  horaFin: string;
+  tipo: TipoTurno;
+  estado: EstadoTurno;
+  notificarMail: boolean;
+};
+
+/**
+ * Body de POST /api/turnos y PATCH /api/turnos/:id.
+ * Debe incluir `pacienteId` o `paciente` (datos de alta).
+ */
+export type UpsertTurnoRequest = {
+  pacienteId?: string;
+  paciente?: PacienteAltaDto;
+  medicoId: string;
+  especialidadId: string;
+  fecha: string;
+  horaInicio: string;
+  horaFin: string;
+  tipo: TipoTurno;
+  notificarMail: boolean;
+};
+
+/**
+ * Query de primera vez paciente+médico.
+ */
+export type PrimeraVezQuery = {
+  pacienteId: string;
+  medicoId: string;
+  excluirTurnoId?: string;
+};
+
+/**
+ * Respuesta de GET /api/turnos/primera-vez.
+ */
+export type PrimeraVezResponse = {
+  primeraVez: boolean;
 };
 
 /**

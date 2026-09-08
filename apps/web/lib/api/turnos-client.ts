@@ -1,21 +1,16 @@
 import type {
   EspecialidadOption,
   MedicoOption,
+  PacienteDetalleDto,
   PacienteOption,
+  PrimeraVezResponse,
+  TurnoDetalleDto,
   TurnosListQuery,
   TurnosListResponse,
+  UpsertTurnoRequest,
 } from '@turnos/shared-types';
 
-/**
- * Shape de error de la API Nest (AllExceptionsFilter).
- */
-type ApiErrorBody = {
-  statusCode: number;
-  message: string;
-  error: string;
-  path: string;
-  timestamp: string;
-};
+import { ApiError, type ApiErrorBody } from '@/lib/api/auth-client';
 
 /**
  * Fetch JSON same-origin (proxy Next → Nest) con cookies.
@@ -38,14 +33,15 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const data: unknown = await response.json().catch(() => null);
 
   if (!response.ok) {
-    throw new Error(
+    if (
       data !== null &&
-        typeof data === 'object' &&
-        'message' in data &&
-        typeof (data as ApiErrorBody).message === 'string'
-        ? (data as ApiErrorBody).message
-        : `HTTP ${response.status}`,
-    );
+      typeof data === 'object' &&
+      'message' in data &&
+      'statusCode' in data
+    ) {
+      throw new ApiError(data as ApiErrorBody);
+    }
+    throw new Error(`HTTP ${response.status}`);
   }
 
   return data as T;
@@ -129,4 +125,84 @@ export function fetchPacientes(q: string): Promise<PacienteOption[]> {
  */
 export function fetchPacienteById(id: string): Promise<PacienteOption> {
   return apiFetch<PacienteOption>(`/api/pacientes/${id}`);
+}
+
+/**
+ * Lookup de paciente por documento para el formulario de turno.
+ *
+ * @param documento - Documento tipado.
+ * @returns Detalle o null si no existe.
+ */
+export function fetchPacienteByDocumento(
+  documento: string,
+): Promise<PacienteDetalleDto | null> {
+  const qs = buildQueryString({ documento });
+  return apiFetch<PacienteDetalleDto | null>(`/api/pacientes${qs}`);
+}
+
+/**
+ * Detalle de un turno.
+ *
+ * @param id - UUID del turno.
+ * @param signal - AbortSignal opcional.
+ * @returns Detalle para el popup.
+ */
+export function fetchTurnoById(
+  id: string,
+  signal?: AbortSignal,
+): Promise<TurnoDetalleDto> {
+  return apiFetch<TurnoDetalleDto>(`/api/turnos/${id}`, { signal });
+}
+
+/**
+ * Consulta si el par paciente+médico es primera vez.
+ *
+ * @param pacienteId - Paciente persistido.
+ * @param medicoId - Médico.
+ * @param excluirTurnoId - Turno actual en edición.
+ * @returns Flag de primera vez.
+ */
+export function fetchPrimeraVez(
+  pacienteId: string,
+  medicoId: string,
+  excluirTurnoId?: string,
+): Promise<PrimeraVezResponse> {
+  const qs = buildQueryString({
+    pacienteId,
+    medicoId,
+    excluirTurnoId,
+  });
+  return apiFetch<PrimeraVezResponse>(`/api/turnos/primera-vez${qs}`);
+}
+
+/**
+ * Crea un turno.
+ *
+ * @param body - Datos de alta.
+ * @returns Detalle creado.
+ */
+export function createTurno(
+  body: UpsertTurnoRequest,
+): Promise<TurnoDetalleDto> {
+  return apiFetch<TurnoDetalleDto>('/api/turnos', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+/**
+ * Edita un turno.
+ *
+ * @param id - UUID del turno.
+ * @param body - Datos de edición.
+ * @returns Detalle actualizado.
+ */
+export function updateTurno(
+  id: string,
+  body: UpsertTurnoRequest,
+): Promise<TurnoDetalleDto> {
+  return apiFetch<TurnoDetalleDto>(`/api/turnos/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+  });
 }

@@ -2,8 +2,12 @@ import { ApiProperty } from '@nestjs/swagger';
 import type { MedicoOption } from '@turnos/shared-types';
 import type { Usuario } from '@turnos/database';
 
+type UsuarioConEspecialidades = Usuario & {
+  especialidades: Array<{ especialidadId: string }>;
+};
+
 /**
- * DTO mínimo de médico para combos de filtro.
+ * DTO de médico para combos de filtro y del formulario de turno.
  */
 export class MedicoResponseDto implements MedicoOption {
   @ApiProperty({ format: 'uuid' })
@@ -15,17 +19,23 @@ export class MedicoResponseDto implements MedicoOption {
   @ApiProperty({ example: 'Médico' })
   apellido!: string;
 
+  @ApiProperty({ type: [String], format: 'uuid' })
+  especialidadIds!: string[];
+
   /**
-   * Mapea una entidad Usuario de Prisma a MedicoResponseDto.
+   * Mapea un médico Prisma con especialidades a MedicoResponseDto.
    *
-   * @param usuario - Entidad Prisma.
-   * @returns DTO público mínimo.
+   * @param usuario - Entidad Prisma con relación `especialidades`.
+   * @returns DTO público con ids cruzados.
    */
-  static fromEntity(usuario: Usuario): MedicoResponseDto {
+  static fromEntity(usuario: UsuarioConEspecialidades): MedicoResponseDto {
     const dto = new MedicoResponseDto();
     dto.id = usuario.id;
     dto.nombre = usuario.nombre;
     dto.apellido = usuario.apellido;
+    dto.especialidadIds = usuario.especialidades.map(
+      (item) => item.especialidadId,
+    );
     return dto;
   }
 }

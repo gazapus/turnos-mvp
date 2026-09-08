@@ -83,6 +83,14 @@ Estilos base sin prefijo = escritorio (≥1024px).
 | `--radius-xl` | `rounded-xl` |
 | `--radius-2xl` | `rounded-2xl` |
 
+## Glass / overlays
+
+| Token CSS (`:root`) | Uso |
+| :------------------ | :-- |
+| `--glass-agenda-bg` | Paneles de Lista/Día en agenda (`glass-panel-agenda`) |
+| `--glass-form-bg` | Velo semitransparente sobre la imagen de fondo del popup de turno |
+| `--glass-form-section-bg` | Fondo de las cajas de sección del popup (50 % menos transparente que el velo del dialog) |
+
 ## Spacing (escala corta)
 
 | Token | Utilidad |

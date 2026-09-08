@@ -20,7 +20,7 @@ El sistema SHALL renderizar en la ruta `/agenda` un layout compartido por todos 
 
 ### Requirement: Botón "Nuevo Turno" visible solo para Recepcionista y Administrador
 
-El sistema SHALL mostrar el botón "Nuevo Turno" únicamente a los roles Recepcionista y Administrador en el layout de Agenda. El rol Médico MUST no ver este botón. En esta etapa, cuando el botón es visible, MUST no disparar ninguna acción (sin navegación ni modal).
+El sistema SHALL mostrar el botón "Nuevo Turno" únicamente a los roles Recepcionista y Administrador en el layout de Agenda. El rol Médico MUST no ver este botón. Activar el botón MUST abrir el popup de alta de turno con título "Nuevo Turno" y el formulario vacío (ver `appointments-form`).
 
 #### Scenario: Recepcionista o administrador ve el botón
 
@@ -32,10 +32,10 @@ El sistema SHALL mostrar el botón "Nuevo Turno" únicamente a los roles Recepci
 - **WHEN** un usuario con rol Médico abre `/agenda`
 - **THEN** el sistema no muestra el botón "Nuevo Turno" en el layout
 
-#### Scenario: Click en Nuevo Turno stub
+#### Scenario: Click en Nuevo Turno abre el alta
 
 - **WHEN** un usuario con rol Recepcionista o Administrador activa el botón "Nuevo Turno"
-- **THEN** el sistema no abre ningún formulario ni navega a otra ruta
+- **THEN** el sistema abre el popup de alta de turno con título "Nuevo Turno" y campos vacíos
 
 ### Requirement: Formulario de filtros por médico, especialidad y paciente
 

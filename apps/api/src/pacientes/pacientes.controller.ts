@@ -15,7 +15,11 @@ import {
 } from '@nestjs/swagger';
 import { AUTH_COOKIE_NAME } from '@turnos/shared-types';
 import { JwtAuthGuard } from '../auth';
-import { ListPacientesQueryDto, PacienteResponseDto } from './dto';
+import {
+  ListPacientesQueryDto,
+  PacienteDetalleResponseDto,
+  PacienteResponseDto,
+} from './dto';
 import { PacientesService } from './pacientes.service';
 
 /**
@@ -27,18 +31,25 @@ export class PacientesController {
   constructor(private readonly pacientesService: PacientesService) {}
 
   /**
-   * Busca pacientes por nombre o apellido.
+   * Busca pacientes por nombre/apellido o por documento exacto.
    *
-   * @param query - Texto de búsqueda.
-   * @returns Coincidencias (vacío si `q` tiene menos de 3 caracteres).
+   * @param query - `q` (filtro) o `documento` (lookup de formulario).
+   * @returns Lista mínima, un detalle con contacto, o null si el documento no existe.
    */
   @Get()
   @UseGuards(JwtAuthGuard)
   @ApiCookieAuth(AUTH_COOKIE_NAME)
-  @ApiOperation({ summary: 'Buscar pacientes por nombre o apellido' })
+  @ApiOperation({
+    summary: 'Buscar pacientes por nombre/apellido o por documento',
+  })
   @ApiResponse({ status: 200, type: [PacienteResponseDto] })
   @ApiResponse({ status: 401, description: 'No autorizado' })
-  list(@Query() query: ListPacientesQueryDto): Promise<PacienteResponseDto[]> {
+  list(
+    @Query() query: ListPacientesQueryDto,
+  ): Promise<PacienteResponseDto[] | PacienteDetalleResponseDto | null> {
+    if (query.documento !== undefined) {
+      return this.pacientesService.findByDocumento(query.documento);
+    }
     return this.pacientesService.search(query.q);
   }
 

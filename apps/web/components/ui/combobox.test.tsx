@@ -146,9 +146,9 @@ describe('Combobox', () => {
   });
 
   it('mantiene el label de la opción remota seleccionada al cerrar', async () => {
-    const fetchOptions = vi.fn().mockResolvedValue([
-      { id: 'p1', label: 'González, María' },
-    ]);
+    const fetchOptions = vi
+      .fn()
+      .mockResolvedValue([{ id: 'p1', label: 'González, María' }]);
     const user = userEvent.setup();
 
     render(<ControlledRemoteCombobox fetchOptions={fetchOptions} />);

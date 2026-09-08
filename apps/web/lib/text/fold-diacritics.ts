@@ -6,8 +6,5 @@
  * @returns Texto plegado.
  */
 export function foldDiacritics(value: string): string {
-  return value
-    .toLocaleLowerCase('es')
-    .normalize('NFD')
-    .replace(/\p{M}/gu, '');
+  return value.toLocaleLowerCase('es').normalize('NFD').replace(/\p{M}/gu, '');
 }

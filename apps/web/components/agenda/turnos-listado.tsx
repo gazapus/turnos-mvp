@@ -2,7 +2,13 @@
 
 import type { AuthRole } from '@turnos/shared-types';
 import { useInfiniteQuery } from '@tanstack/react-query';
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  type KeyboardEvent,
+} from 'react';
 
 import {
   toAppliedFilters,
@@ -17,7 +23,35 @@ import { TurnoTipoIcon } from './turno-tipo-icon';
 type TurnosListadoProps = {
   rol: AuthRole;
   params: ParsedAgendaParams;
+  onAbrirTurno: (turnoId: string) => void;
 };
+
+/**
+ * Evita que el click en Acciones abra el detalle de la fila.
+ *
+ * @param event - Click en la celda de acciones.
+ */
+function stopAccionesClick(event: { stopPropagation: () => void }): void {
+  event.stopPropagation();
+}
+
+/**
+ * Abre el detalle con teclado cuando la fila está enfocada.
+ *
+ * @param event - Keydown en la fila.
+ * @param turnoId - Turno de la fila.
+ * @param onAbrirTurno - Callback de apertura.
+ */
+function handleRowKeyDown(
+  event: KeyboardEvent<HTMLTableRowElement>,
+  turnoId: string,
+  onAbrirTurno: (id: string) => void,
+): void {
+  if (event.key === 'Enter' || event.key === ' ') {
+    event.preventDefault();
+    onAbrirTurno(turnoId);
+  }
+}
 
 type PageParam = {
   cursor?: string;
@@ -31,7 +65,11 @@ type PageParam = {
  * @param props - Rol y params aplicados desde la URL.
  * @returns Tabla de turnos con paginación por cursor.
  */
-export function TurnosListado({ rol, params }: TurnosListadoProps) {
+export function TurnosListado({
+  rol,
+  params,
+  onAbrirTurno,
+}: TurnosListadoProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const appliedFilters = useMemo(() => toAppliedFilters(params), [params]);
 
@@ -151,52 +189,53 @@ export function TurnosListado({ rol, params }: TurnosListadoProps) {
       )}
 
       {!isLoading && !isError && allItems.length > 0 && (
-        <>
-          {/*
-            Extension point: doble click en fila → detalle de turno (futura iteración).
-          */}
-          <table className="w-full min-w-[960px] border-collapse text-sm">
-            <thead className="sticky top-0 z-10 bg-muted text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              <tr>
-                <th className="px-4 py-3">Fecha</th>
-                <th className="px-4 py-3">Hora</th>
-                <th className="px-4 py-3">Paciente</th>
-                <th className="px-4 py-3">Doctor</th>
-                <th className="px-4 py-3">Especialidad</th>
-                <th className="px-4 py-3">Estado</th>
-                <th className="px-4 py-3">Tipo</th>
-                <th className="px-4 py-3">Acciones</th>
+        <table className="w-full min-w-[960px] border-collapse text-sm">
+          <thead className="sticky top-0 z-10 bg-muted text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <tr>
+              <th className="px-4 py-3">Fecha</th>
+              <th className="px-4 py-3">Hora</th>
+              <th className="px-4 py-3">Paciente</th>
+              <th className="px-4 py-3">Doctor</th>
+              <th className="px-4 py-3">Especialidad</th>
+              <th className="px-4 py-3">Estado</th>
+              <th className="px-4 py-3">Tipo</th>
+              <th className="px-4 py-3">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {allItems.map((turno) => (
+              <tr
+                key={turno.id}
+                className="cursor-pointer border-t border-border hover:bg-muted/50"
+                tabIndex={0}
+                aria-label={`Ver detalle del turno de ${turno.paciente.apellido}, ${turno.paciente.nombre}`}
+                onClick={() => onAbrirTurno(turno.id)}
+                onKeyDown={(event) =>
+                  handleRowKeyDown(event, turno.id, onAbrirTurno)
+                }
+              >
+                <td className="px-4 py-3 whitespace-nowrap">{turno.fecha}</td>
+                <td className="px-4 py-3 whitespace-nowrap">{turno.hora}</td>
+                <td className="px-4 py-3">
+                  {turno.paciente.apellido}, {turno.paciente.nombre}
+                </td>
+                <td className="px-4 py-3">
+                  {turno.medico.apellido}, {turno.medico.nombre}
+                </td>
+                <td className="px-4 py-3">{turno.especialidad.nombre}</td>
+                <td className="px-4 py-3">
+                  <TurnoEstadoPill estado={turno.estado} />
+                </td>
+                <td className="px-4 py-3">
+                  <TurnoTipoIcon tipo={turno.tipo} />
+                </td>
+                <td className="px-4 py-3" onClick={stopAccionesClick}>
+                  <TurnoAcciones rol={rol} />
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {allItems.map((turno) => (
-                <tr
-                  key={turno.id}
-                  className="border-t border-border hover:bg-muted/50"
-                >
-                  <td className="px-4 py-3 whitespace-nowrap">{turno.fecha}</td>
-                  <td className="px-4 py-3 whitespace-nowrap">{turno.hora}</td>
-                  <td className="px-4 py-3">
-                    {turno.paciente.apellido}, {turno.paciente.nombre}
-                  </td>
-                  <td className="px-4 py-3">
-                    {turno.medico.apellido}, {turno.medico.nombre}
-                  </td>
-                  <td className="px-4 py-3">{turno.especialidad.nombre}</td>
-                  <td className="px-4 py-3">
-                    <TurnoEstadoPill estado={turno.estado} />
-                  </td>
-                  <td className="px-4 py-3">
-                    <TurnoTipoIcon tipo={turno.tipo} />
-                  </td>
-                  <td className="px-4 py-3">
-                    <TurnoAcciones rol={rol} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </>
+            ))}
+          </tbody>
+        </table>
       )}
 
       {isFetchingNextPage && (

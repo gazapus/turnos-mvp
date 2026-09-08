@@ -11,7 +11,7 @@ La grilla horaria del modo Día SHALL permitir seleccionar huecos en segmentos d
 
 ### Requirement: Click en hueco vacío abre el alta precargada
 
-El sistema SHALL abrir el popup de alta de turno cuando un Recepcionista o Administrador hace click izquierdo en un espacio vacío de la grilla Día. El popup MUST usar el mismo formulario que "Nuevo Turno", con fecha del día visible y hora de inicio/fin precargadas (fin = inicio + 30 minutos). El rol Médico MUST NOT abrir el alta desde un hueco. El modo Lista MUST NOT abrir este popup al clickear una fila.
+El sistema SHALL abrir el popup de alta de turno cuando un Recepcionista o Administrador hace click izquierdo en un espacio vacío de la grilla Día. El popup MUST usar el mismo formulario que "Nuevo Turno", con fecha del día visible y hora de inicio/fin precargadas (fin = inicio + 30 minutos). El rol Médico MUST NOT abrir el alta desde un hueco.
 
 #### Scenario: Recepcionista crea desde un hueco
 
