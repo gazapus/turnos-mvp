@@ -45,7 +45,7 @@ model Usuario {
 
   // Relaciones — solo aplican si rol = MEDICO
   especialidades      MedicoEspecialidad[]
-  consultorio         MedicoConsultorio?
+  consultorio         Consultorio?
 
   // Turnos donde este usuario es el médico atendiendo
   turnosComoMedico    Turno[]           @relation("MedicoDeTurno")
@@ -82,14 +82,15 @@ model MedicoEspecialidad {
   @@map("medico_especialidad")
 }
 
-// Relación 1:1 fija médico <-> consultorio, configurada por el recepcionista
-model MedicoConsultorio {
-  medicoId    String @id @map("medico_id")
-  consultorio String // texto libre, se normaliza a mayúsculas en la capa de aplicación
+// Catálogo numerado de consultorios; médico opcional (asignación 1:1)
+model Consultorio {
+  id       String  @id @default(uuid())
+  numero   Int     @unique
+  medicoId String? @unique @map("medico_id")
 
-  medico Usuario @relation(fields: [medicoId], references: [id])
+  medico Usuario? @relation(fields: [medicoId], references: [id])
 
-  @@map("medico_consultorio")
+  @@map("consultorios")
 }
 
 model Paciente {

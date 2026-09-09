@@ -3,6 +3,7 @@ import { APP_FILTER } from '@nestjs/core';
 import { LoggerModule } from 'nestjs-pino';
 import { AppointmentsModule } from './appointments';
 import { AuthModule } from './auth';
+import { ConsultoriosModule } from './consultorios';
 import { AllExceptionsFilter } from './common';
 import { EspecialidadesModule } from './especialidades';
 import { HealthModule } from './health';
@@ -26,6 +27,7 @@ import { UsersModule } from './users';
     EspecialidadesModule,
     PacientesModule,
     AppointmentsModule,
+    ConsultoriosModule,
   ],
   providers: [
     {

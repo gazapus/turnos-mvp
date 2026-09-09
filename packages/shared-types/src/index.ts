@@ -11,6 +11,12 @@ export {
 } from './auth';
 
 export {
+  type AsignarConsultorioRequest,
+  type ConsultorioDto,
+  type ConsultorioMedicoDto,
+} from './consultorios';
+
+export {
   DIRECCION_PAGINACION,
   ESTADO_TURNO,
   TIPO_TURNO,

@@ -44,7 +44,12 @@ describe('UsersService', () => {
     const result = await service.findAll();
 
     expect(result).toEqual([
-      { id: 'm1', nombre: 'Carlos', apellido: 'Médico', especialidadIds: ['e1'] },
+      {
+        id: 'm1',
+        nombre: 'Carlos',
+        apellido: 'Médico',
+        especialidadIds: ['e1'],
+      },
     ]);
     expect(mockFindMany).toHaveBeenCalledWith(
       expect.objectContaining({

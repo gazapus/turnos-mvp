@@ -43,6 +43,8 @@ const INPUT_INVALID_CLASS = 'border-danger';
 
 const STATUS_SEARCHING = 'Buscando…';
 const STATUS_NO_MATCHES = 'Sin coincidencias';
+/** Alto máximo del listado (`max-h-60`) para decidir si abre hacia arriba. */
+const LISTBOX_MAX_PX = 240;
 
 /**
  * Combobox tipeable: filtra opciones locales o remotas y selecciona con teclado o click.
@@ -67,6 +69,7 @@ export function Combobox({
   const rootRef = useRef<HTMLDivElement>(null);
   const previousValueRef = useRef(value);
   const [open, setOpen] = useState(false);
+  const [openUp, setOpenUp] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const [highlight, setHighlight] = useState(0);
   const [remoteOptions, setRemoteOptions] = useState<ComboboxOption[]>([]);
@@ -115,6 +118,20 @@ export function Combobox({
       foldDiacritics(option.label).includes(normalized),
     );
   }, [isQuerying, isRemote, options, query, remoteOptions]);
+
+  useEffect(() => {
+    if (!open) {
+      setOpenUp(false);
+      return;
+    }
+    const el = rootRef.current;
+    if (!el) {
+      return;
+    }
+    const rect = el.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - rect.bottom;
+    setOpenUp(spaceBelow < LISTBOX_MAX_PX);
+  }, [open, visibleOptions.length]);
 
   useEffect(() => {
     if (!fetchOptions || !open) {
@@ -244,7 +261,7 @@ export function Combobox({
   }
 
   return (
-    <div ref={rootRef} className="relative">
+    <div ref={rootRef} className={`relative ${open ? 'z-30' : ''}`}>
       <input
         id={id}
         role="combobox"
@@ -286,7 +303,9 @@ export function Combobox({
         <ul
           id={listboxId}
           role="listbox"
-          className="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-md border border-border bg-background py-1 shadow-elevated"
+          className={`absolute z-30 max-h-60 w-full overflow-auto rounded-md border border-border bg-background py-1 shadow-elevated ${
+            openUp ? 'bottom-full mb-1' : 'top-full mt-1'
+          }`}
         >
           {visibleOptions.length === 0 ? (
             <li className="px-3 py-2 text-sm text-muted-foreground">

@@ -35,6 +35,7 @@ function ControlledRemoteCombobox({
 describe('Combobox', () => {
   afterEach(() => {
     cleanup();
+    vi.restoreAllMocks();
   });
 
   it('muestra el placeholder Todos', () => {
@@ -183,5 +184,37 @@ describe('Combobox', () => {
 
     expect(await screen.findByText(/sin coincidencias/i)).toBeInTheDocument();
     expect(screen.queryByText(/buscando/i)).not.toBeInTheDocument();
+  });
+
+  it('abre el listado hacia arriba si no hay espacio debajo', async () => {
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+      x: 0,
+      y: 500,
+      top: 500,
+      left: 0,
+      bottom: 540,
+      right: 200,
+      width: 200,
+      height: 40,
+      toJSON: () => ({}),
+    });
+    Object.defineProperty(window, 'innerHeight', {
+      configurable: true,
+      value: 600,
+    });
+    const user = userEvent.setup();
+
+    render(
+      <Combobox
+        id="filtro-demo"
+        value=""
+        onChange={vi.fn()}
+        options={[{ id: 'e1', label: 'Cardiología' }]}
+      />,
+    );
+
+    await user.click(screen.getByRole('combobox'));
+    const listbox = await screen.findByRole('listbox');
+    expect(listbox.className).toContain('bottom-full');
   });
 });
