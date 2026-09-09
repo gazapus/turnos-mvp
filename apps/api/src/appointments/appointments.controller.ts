@@ -20,11 +20,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { AUTH_COOKIE_NAME } from '@turnos/shared-types';
-import {
-  AuthenticatedRequest,
-  JwtAuthGuard,
-  type JwtPayload,
-} from '../auth';
+import { AuthenticatedRequest, JwtAuthGuard, type JwtPayload } from '../auth';
 import { AppointmentsService } from './appointments.service';
 import {
   ListTurnosQueryDto,
@@ -33,6 +29,7 @@ import {
   TurnoDetalleResponseDto,
   TurnosListResponseDto,
   UpsertTurnoDto,
+  CancelarTurnoDto,
 } from './dto';
 
 /**
@@ -151,6 +148,36 @@ export class AppointmentsController {
     @Req() req: AuthenticatedRequest,
   ): Promise<TurnoDetalleResponseDto> {
     return this.appointmentsService.confirmarTurno(id, this.requireUser(req));
+  }
+
+  /**
+   * Cancela un turno PROGRAMADO o CONFIRMADO.
+   *
+   * @param id - UUID del turno.
+   * @param dto - Motivo opcional.
+   * @param req - Request autenticada.
+   * @returns Detalle cancelado.
+   */
+  @Patch(':id/cancelar')
+  @UseGuards(JwtAuthGuard)
+  @ApiCookieAuth(AUTH_COOKIE_NAME)
+  @ApiOperation({ summary: 'Cancelar turno' })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiResponse({ status: 200, type: TurnoDetalleResponseDto })
+  @ApiResponse({ status: 400, description: 'Estado inválido' })
+  @ApiResponse({ status: 401, description: 'No autorizado' })
+  @ApiResponse({ status: 403, description: 'Sin permiso de escritura' })
+  @ApiResponse({ status: 404, description: 'Turno no encontrado' })
+  cancelar(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: CancelarTurnoDto,
+    @Req() req: AuthenticatedRequest,
+  ): Promise<TurnoDetalleResponseDto> {
+    return this.appointmentsService.cancelarTurno(
+      id,
+      dto,
+      this.requireUser(req),
+    );
   }
 
   /**

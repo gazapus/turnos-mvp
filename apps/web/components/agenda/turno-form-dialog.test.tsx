@@ -15,6 +15,7 @@ import {
   fetchPrimeraVez,
   fetchTurnoById,
   confirmarTurno,
+  cancelarTurno,
 } from '@/lib/api/turnos-client';
 import { TurnoFormDialog, type TurnoFormMode } from './turno-form-dialog';
 
@@ -27,6 +28,7 @@ vi.mock('@/lib/api/turnos-client', () => ({
   createTurno: vi.fn(),
   updateTurno: vi.fn(),
   confirmarTurno: vi.fn(),
+  cancelarTurno: vi.fn(),
 }));
 
 const mockFetchMedicos = vi.mocked(fetchMedicos);
@@ -35,6 +37,7 @@ const mockFetchPacienteByDocumento = vi.mocked(fetchPacienteByDocumento);
 const mockFetchTurnoById = vi.mocked(fetchTurnoById);
 const mockFetchPrimeraVez = vi.mocked(fetchPrimeraVez);
 const mockConfirmarTurno = vi.mocked(confirmarTurno);
+const mockCancelarTurno = vi.mocked(cancelarTurno);
 
 const recepcionista: AuthUser = {
   id: 'r1',
@@ -72,6 +75,7 @@ const detalle: TurnoDetalleDto = {
   tipo: 'CONTROL',
   estado: 'PROGRAMADO',
   notificarMail: false,
+  motivoCancelacion: null,
 };
 
 /**
@@ -257,7 +261,7 @@ describe('TurnoFormDialog', () => {
       screen.queryByRole('button', { name: /confirmar turno/i }),
     ).not.toBeInTheDocument();
     expect(
-      screen.queryByRole('button', { name: /anular turno/i }),
+      screen.queryByRole('button', { name: /cancelar turno/i }),
     ).not.toBeInTheDocument();
   });
 
@@ -355,6 +359,9 @@ describe('TurnoFormDialog', () => {
     await screen.findByRole('heading', { name: /nuevo turno/i });
     expect(
       screen.queryByRole('button', { name: /confirmar turno/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /cancelar turno/i }),
     ).not.toBeInTheDocument();
   });
 
@@ -490,5 +497,203 @@ describe('TurnoFormDialog', () => {
     ).toBeInTheDocument();
     expect(onSaved).not.toHaveBeenCalled();
     expect(screen.getByRole('dialog')).toBeInTheDocument();
+  });
+
+  it('muestra Cancelar en PROGRAMADO y CONFIRMADO', async () => {
+    renderDialog(
+      <TurnoFormDialog
+        open
+        mode={{ kind: 'detail', turnoId: 't1' }}
+        user={recepcionista}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    );
+    expect(
+      await screen.findByRole('button', { name: /cancelar turno/i }),
+    ).toBeInTheDocument();
+
+    cleanup();
+    mockFetchTurnoById.mockResolvedValue({
+      ...detalle,
+      estado: 'CONFIRMADO',
+    });
+    renderDialog(
+      <TurnoFormDialog
+        open
+        mode={{ kind: 'detail', turnoId: 't1' }}
+        user={recepcionista}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    );
+    expect(
+      await screen.findByRole('button', { name: /cancelar turno/i }),
+    ).toBeInTheDocument();
+  });
+
+  it('oculta Cancelar en ATENDIDO, AUSENTE y CANCELADO', async () => {
+    for (const estado of ['ATENDIDO', 'AUSENTE', 'CANCELADO'] as const) {
+      cleanup();
+      mockFetchTurnoById.mockResolvedValue({
+        ...detalle,
+        estado,
+      });
+      renderDialog(
+        <TurnoFormDialog
+          open
+          mode={{ kind: 'detail', turnoId: 't1' }}
+          user={recepcionista}
+          onClose={vi.fn()}
+          onSaved={vi.fn()}
+        />,
+      );
+      await waitFor(() => {
+        expect(
+          screen.queryByTestId('turno-form-overlay'),
+        ).not.toBeInTheDocument();
+      });
+      expect(
+        screen.queryByRole('button', { name: /cancelar turno/i }),
+      ).not.toBeInTheDocument();
+    }
+  });
+
+  it('éxito de cancelar cierra el popup y llama onSaved', async () => {
+    const user = userEvent.setup();
+    const onSaved = vi.fn();
+    mockCancelarTurno.mockResolvedValue({
+      ...detalle,
+      estado: 'CANCELADO',
+      motivoCancelacion: null,
+    });
+
+    /**
+     * Controla `open` para simular el cierre del padre.
+     *
+     * @returns Dialog de detalle.
+     */
+    function Harness() {
+      const [open, setOpen] = useState(true);
+      const mode: TurnoFormMode = { kind: 'detail', turnoId: 't1' };
+      return (
+        <TurnoFormDialog
+          open={open}
+          mode={open ? mode : null}
+          user={recepcionista}
+          onClose={() => setOpen(false)}
+          onSaved={onSaved}
+        />
+      );
+    }
+
+    renderDialog(<Harness />);
+    await user.click(
+      await screen.findByRole('button', { name: /cancelar turno/i }),
+    );
+    await user.click(screen.getByRole('button', { name: /^aceptar$/i }));
+
+    expect(mockCancelarTurno).toHaveBeenCalledWith('t1', undefined);
+    expect(onSaved).toHaveBeenCalledTimes(1);
+    expect(
+      await screen.findByText(/turno cancelado correctamente/i),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('error de cancelar deja el popup abierto', async () => {
+    const user = userEvent.setup();
+    const onSaved = vi.fn();
+    mockCancelarTurno.mockRejectedValue(
+      new ApiError({
+        statusCode: 400,
+        message:
+          'Solo se pueden cancelar turnos en estado Programado o Confirmado',
+        error: 'Bad Request',
+        path: '/api/turnos/t1/cancelar',
+        timestamp: new Date().toISOString(),
+      }),
+    );
+
+    renderDialog(
+      <TurnoFormDialog
+        open
+        mode={{ kind: 'detail', turnoId: 't1' }}
+        user={recepcionista}
+        onClose={vi.fn()}
+        onSaved={onSaved}
+      />,
+    );
+
+    await user.click(
+      await screen.findByRole('button', { name: /cancelar turno/i }),
+    );
+    await user.click(screen.getByRole('button', { name: /^aceptar$/i }));
+
+    expect(
+      await screen.findByText(/no se pudo cancelar el turno/i),
+    ).toBeInTheDocument();
+    expect(onSaved).not.toHaveBeenCalled();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+  });
+
+  it('muestra el motivo persistido en un CANCELADO', async () => {
+    mockFetchTurnoById.mockResolvedValue({
+      ...detalle,
+      estado: 'CANCELADO',
+      motivoCancelacion: 'Paciente reprogramó',
+    });
+
+    renderDialog(
+      <TurnoFormDialog
+        open
+        mode={{ kind: 'detail', turnoId: 't1' }}
+        user={recepcionista}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    );
+
+    expect(
+      await screen.findByText(/motivo de cancelación/i),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Paciente reprogramó')).toBeInTheDocument();
+  });
+
+  it('muestra Sin especificar si el CANCELADO no tiene motivo', async () => {
+    mockFetchTurnoById.mockResolvedValue({
+      ...detalle,
+      estado: 'CANCELADO',
+      motivoCancelacion: null,
+    });
+
+    renderDialog(
+      <TurnoFormDialog
+        open
+        mode={{ kind: 'detail', turnoId: 't1' }}
+        user={recepcionista}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    );
+
+    expect(await screen.findByText(/sin especificar/i)).toBeInTheDocument();
+  });
+
+  it('no muestra motivo de cancelación si el turno no está CANCELADO', async () => {
+    renderDialog(
+      <TurnoFormDialog
+        open
+        mode={{ kind: 'detail', turnoId: 't1' }}
+        user={recepcionista}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    );
+
+    await screen.findByRole('heading', { name: /detalle de turno/i });
+    expect(
+      screen.queryByText(/motivo de cancelación/i),
+    ).not.toBeInTheDocument();
   });
 });

@@ -40,6 +40,7 @@ vi.mock('@/lib/api/turnos-client', () => ({
   createTurno: vi.fn(),
   updateTurno: vi.fn(),
   confirmarTurno: vi.fn(),
+  cancelarTurno: vi.fn(),
 }));
 
 const recepcionista: AuthUser = {

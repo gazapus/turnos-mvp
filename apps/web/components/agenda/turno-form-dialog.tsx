@@ -30,6 +30,7 @@ import { Controller, useForm } from 'react-hook-form';
 
 import { Combobox, useFeedback } from '@/components/ui';
 import { todayYmd } from '@/lib/agenda/fecha-dia';
+import { canCancelarTurno } from '@/lib/agenda/can-cancelar-turno';
 import { canConfirmarTurno } from '@/lib/agenda/can-confirmar-turno';
 import { addMinutesHm, digitsOnly } from '@/lib/agenda/hora';
 import { ApiError } from '@/lib/api/auth-client';
@@ -47,10 +48,12 @@ import {
   turnoFormSchema,
   type TurnoFormValues,
 } from '@/lib/schemas/turno-form-schema';
+import { useCancelarTurno } from './use-cancelar-turno';
 import { useConfirmarTurno } from './use-confirmar-turno';
 
 const LOOKUP_DEBOUNCE_MS = 1500;
 const FRIENDLY_SAVE_ERROR = 'No se pudo guardar el turno';
+const MOTIVO_SIN_ESPECIFICAR = 'Sin especificar';
 
 const INPUT_BASE_CLASS =
   'w-full rounded-md border bg-input px-3 py-2 text-sm text-input-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:bg-input disabled:text-input-foreground disabled:opacity-100 disabled:[-webkit-text-fill-color:var(--input-foreground)]';
@@ -217,6 +220,7 @@ export function TurnoFormDialog({
   const queryClient = useQueryClient();
   const { toastSuccess, showError } = useFeedback();
   const { confirmar, pending: confirming } = useConfirmarTurno();
+  const { cancelar, pending: canceling } = useCancelarTurno();
   const canWrite = user.rol === 'ADMIN' || user.rol === 'RECEPCIONISTA';
   const isMedico = user.rol === 'MEDICO';
   const [pacienteLocked, setPacienteLocked] = useState(false);
@@ -226,6 +230,7 @@ export function TurnoFormDialog({
     TurnoDetalleDto['estado'] | null
   >(null);
   const [loadedFecha, setLoadedFecha] = useState<string | null>(null);
+  const [loadedMotivo, setLoadedMotivo] = useState<string | null>(null);
   const lookupTimer = useRef<number | null>(null);
   const lastLookupRef = useRef('');
 
@@ -309,6 +314,14 @@ export function TurnoFormDialog({
       estado: loadedEstado,
       fecha: loadedFecha,
     });
+  const showCancelar =
+    isDetail &&
+    loadedEstado !== null &&
+    canCancelarTurno({
+      rol: user.rol,
+      estado: loadedEstado,
+    });
+  const showMotivoCancelacion = isDetail && loadedEstado === 'CANCELADO';
   const isValid = form.formState.isValid;
   const isDirty = form.formState.isDirty;
   const guardarEnabled =
@@ -333,6 +346,7 @@ export function TurnoFormDialog({
     setSaving(false);
     setLoadedEstado(null);
     setLoadedFecha(null);
+    setLoadedMotivo(null);
     const defaults = emptyTurnoFormValues();
     if (mode.kind === 'create') {
       if (mode.fecha) {
@@ -353,6 +367,7 @@ export function TurnoFormDialog({
     const turno = detailQuery.data;
     setLoadedEstado(turno.estado);
     setLoadedFecha(turno.fecha);
+    setLoadedMotivo(turno.motivoCancelacion);
     setPacienteLocked(true);
     lastLookupRef.current = turno.paciente.documento;
     form.reset(valuesFromDetalle(turno));
@@ -542,6 +557,20 @@ export function TurnoFormDialog({
     }
   }
 
+  /**
+   * Cancela el turno del detalle y cierra el popup si sale bien.
+   */
+  async function handleCancelar(): Promise<void> {
+    if (!turnoId) {
+      return;
+    }
+    const ok = await cancelar(turnoId);
+    if (ok) {
+      onSaved();
+      handleClose();
+    }
+  }
+
   if (!open || !mode) {
     return null;
   }
@@ -568,7 +597,7 @@ export function TurnoFormDialog({
             'linear-gradient(var(--glass-form-bg), var(--glass-form-bg)), url(/images/agenda/appointments-background.png)',
         }}
       >
-        {(loadingDetalle || saving || confirming) && (
+        {(loadingDetalle || saving || confirming || canceling) && (
           <div
             className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-background/70"
             data-testid="turno-form-overlay"
@@ -729,6 +758,16 @@ export function TurnoFormDialog({
                 <FieldError message={errors.horaFin?.message} />
               </div>
             </div>
+            {showMotivoCancelacion ? (
+              <div className="mt-4">
+                <p className="mb-1 text-sm font-medium">
+                  Motivo de cancelación
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {loadedMotivo?.trim() ? loadedMotivo : MOTIVO_SIN_ESPECIFICAR}
+                </p>
+              </div>
+            ) : null}
           </section>
 
           <section className={`mb-6 ${FORM_SECTION_CLASS}`}>
@@ -850,7 +889,7 @@ export function TurnoFormDialog({
             <div className="mb-4 flex justify-center">
               <button
                 type="button"
-                disabled={confirming}
+                disabled={confirming || canceling}
                 className="inline-flex cursor-pointer items-center gap-2 rounded-md bg-primary px-10 py-3 text-sm font-semibold uppercase tracking-wide text-primary-foreground hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
                 onClick={() => void handleConfirmar()}
               >
@@ -873,13 +912,15 @@ export function TurnoFormDialog({
           ) : null}
 
           <div className="flex flex-wrap items-center justify-between gap-3">
-            {isDetail && canWrite ? (
+            {showCancelar ? (
               <button
                 type="button"
-                className="inline-flex cursor-pointer items-center gap-2 text-sm font-medium text-danger underline hover:opacity-80"
+                disabled={canceling || confirming}
+                className="inline-flex cursor-pointer items-center gap-2 text-sm font-medium text-danger underline hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
+                onClick={() => void handleCancelar()}
               >
                 <Trash2 className="size-4" aria-hidden />
-                Anular turno
+                Cancelar turno
               </button>
             ) : (
               <span />

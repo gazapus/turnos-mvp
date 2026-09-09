@@ -1,22 +1,4 @@
-## Purpose
-
-Primitivas de feedback transversal para el shell autenticado: toast de éxito genérico, dialog de error genérico y dialog de confirmación warning, reutilizables desde cualquier pantalla (incluido el popup de turnos).
-
-## Requirements
-
-### Requirement: Toast de éxito genérico
-
-El sistema SHALL exponer un toast de éxito reutilizable desde cualquier pantalla autenticada, invocable con un mensaje. El toast MUST permanecer visible 5 segundos y MUST cerrarse desvaneciéndose durante 1 segundo. MUST poder usarse sin acoplarse al popup de turnos.
-
-#### Scenario: Toast tras una acción exitosa
-
-- **WHEN** una pantalla invoca el toast de éxito con un mensaje
-- **THEN** el mensaje se muestra y a los 5 segundos comienza a desvanecerse hasta desaparecer en 1 segundo
-
-#### Scenario: Reutilizable fuera de turnos
-
-- **WHEN** otra pantalla autenticada dispara el mismo toast con otro mensaje
-- **THEN** se muestra ese mensaje con la misma duración y el mismo cierre
+## MODIFIED Requirements
 
 ### Requirement: Dialog de error genérico
 
@@ -31,6 +13,8 @@ El sistema SHALL exponer un dialog de error modal reutilizable, superpuesto a cu
 
 - **WHEN** falla el guardado del turno con el formulario abierto
 - **THEN** el dialog de error se muestra sobre el popup del formulario y el formulario no se cierra
+
+## ADDED Requirements
 
 ### Requirement: Dialog de confirmación warning
 

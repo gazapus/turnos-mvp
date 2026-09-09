@@ -60,6 +60,9 @@ export class TurnoDetalleResponseDto implements TurnoDetalleDto {
   @ApiProperty()
   notificarMail!: boolean;
 
+  @ApiProperty({ nullable: true, type: String })
+  motivoCancelacion!: string | null;
+
   /**
    * Mapea un turno Prisma con relaciones al DTO de detalle.
    *
@@ -83,6 +86,7 @@ export class TurnoDetalleResponseDto implements TurnoDetalleDto {
     dto.tipo = turno.tipo;
     dto.estado = turno.estado;
     dto.notificarMail = turno.notificarMail;
+    dto.motivoCancelacion = turno.motivoCancelacion;
     return dto;
   }
 }

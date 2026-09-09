@@ -8,3 +8,4 @@ export {
 export { UpsertTurnoDto, PacienteAltaInputDto } from './upsert-turno.dto';
 export { PrimeraVezQueryDto, PrimeraVezResponseDto } from './primera-vez.dto';
 export { TurnoDetalleResponseDto } from './turno-detalle.dto';
+export { CancelarTurnoDto, MOTIVO_CANCELACION_MAX } from './cancelar-turno.dto';

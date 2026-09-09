@@ -1,2 +1,7 @@
 export { Combobox, type ComboboxOption } from './combobox';
-export { FeedbackProvider, useFeedback } from './feedback-provider';
+export {
+  FeedbackProvider,
+  useFeedback,
+  type ConfirmOptions,
+  type ConfirmResult,
+} from './feedback-provider';

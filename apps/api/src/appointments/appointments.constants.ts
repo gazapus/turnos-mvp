@@ -160,10 +160,7 @@ export const HM_PATTERN = /^([01]\d|2[0-3]):([0-5]\d)$/;
  * @param hm - Hora HH:mm.
  * @returns Date o null si el input es inválido.
  */
-export function clinicDateTimeFromYmdHm(
-  ymd: string,
-  hm: string,
-): Date | null {
+export function clinicDateTimeFromYmdHm(ymd: string, hm: string): Date | null {
   const range = clinicDayRangeFromYmd(ymd);
   const match = HM_PATTERN.exec(hm);
   if (!range || !match) {
@@ -231,6 +228,9 @@ export const CONFIRMAR_TURNO_SOLO_PROGRAMADO =
 
 export const CONFIRMAR_TURNO_SOLO_HOY =
   'Solo se pueden confirmar turnos del día de hoy' as const;
+
+export const CANCELAR_TURNO_ESTADO_INVALIDO =
+  'Solo se pueden cancelar turnos en estado Programado o Confirmado' as const;
 
 /**
  * Normaliza un documento a dígitos.

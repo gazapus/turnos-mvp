@@ -14,6 +14,7 @@ import {
 import type { DireccionPaginacion } from '@turnos/shared-types';
 import type { JwtPayload } from '../auth';
 import {
+  CANCELAR_TURNO_ESTADO_INVALIDO,
   CONFIRMAR_TURNO_SOLO_HOY,
   CONFIRMAR_TURNO_SOLO_PROGRAMADO,
   CURSOR_NIL_UUID,
@@ -34,6 +35,7 @@ import {
   TurnoListItemResponseDto,
   TurnosListResponseDto,
   UpsertTurnoDto,
+  CancelarTurnoDto,
 } from './dto';
 
 const PAGE_SIZE = 30;
@@ -303,6 +305,53 @@ export class AppointmentsService {
   }
 
   /**
+   * Cancela un turno PROGRAMADO o CONFIRMADO, con motivo opcional.
+   *
+   * @param id - UUID del turno.
+   * @param dto - Motivo opcional.
+   * @param user - Usuario autenticado.
+   * @returns Detalle con estado CANCELADO.
+   */
+  async cancelarTurno(
+    id: string,
+    dto: CancelarTurnoDto | undefined,
+    user: JwtPayload,
+  ): Promise<TurnoDetalleResponseDto> {
+    this.assertCanWrite(user);
+
+    const motivo = this.normalizeMotivo(dto?.motivo);
+    const updated = await prisma.turno.updateMany({
+      where: {
+        id,
+        estado: {
+          in: [EstadoTurno.PROGRAMADO, EstadoTurno.CONFIRMADO],
+        },
+      },
+      data: {
+        estado: EstadoTurno.CANCELADO,
+        motivoCancelacion: motivo,
+      },
+    });
+
+    if (updated.count === 0) {
+      const existing = await prisma.turno.findUnique({ where: { id } });
+      if (!existing) {
+        throw new NotFoundException('Turno no encontrado');
+      }
+      throw new BadRequestException(CANCELAR_TURNO_ESTADO_INVALIDO);
+    }
+
+    const turno = await prisma.turno.findUnique({
+      where: { id },
+      include: TURNO_DETALLE_INCLUDE,
+    });
+    if (!turno) {
+      throw new NotFoundException('Turno no encontrado');
+    }
+    return TurnoDetalleResponseDto.fromEntity(turno);
+  }
+
+  /**
    * Prohíbe escritura al rol médico.
    *
    * @param user - JWT.
@@ -311,6 +360,17 @@ export class AppointmentsService {
     if (user.rol === RolUsuario.MEDICO) {
       throw new ForbiddenException('No autorizado');
     }
+  }
+
+  /**
+   * Normaliza el motivo: trim; vacío o ausente queda nulo.
+   *
+   * @param raw - Motivo ingresado.
+   * @returns Motivo o null.
+   */
+  private normalizeMotivo(raw?: string): string | null {
+    const trimmed = raw?.trim();
+    return trimmed || null;
   }
 
   /**

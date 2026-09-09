@@ -22,6 +22,7 @@ const mockConfirmarTurno = vi.mocked(confirmarTurno);
 vi.mock('@/lib/api/turnos-client', () => ({
   fetchTurnos: vi.fn(),
   confirmarTurno: vi.fn(),
+  cancelarTurno: vi.fn(),
 }));
 
 const listaParams = {

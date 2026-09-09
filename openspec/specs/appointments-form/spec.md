@@ -44,7 +44,7 @@ Al abrir un turno existente el sistema SHALL consultar `GET /api/turnos/:id`, mo
 #### Scenario: Overlay mientras carga
 
 - **WHEN** el usuario abre el detalle de un turno y la petición de detalle aún no respondió
-- **THEN** el formulario no acepta edición ni Guardar/Confirmar/Anular/Llamar y se ve un indicador de carga
+- **THEN** el formulario no acepta edición ni Guardar/Confirmar/Cancelar/Llamar y se ve un indicador de carga
 
 #### Scenario: X aborta la carga
 
@@ -204,22 +204,22 @@ Cuando Guardar está deshabilitado el sistema SHALL mostrar un tooltip al pasar 
 
 ### Requirement: Botones según rol y modo
 
-En alta MUST mostrarse solo Salir y Guardar (no Confirmar ni Anular). En detalle, Recepcionista y Administrador MUST ver Anular turno (sin efecto y sin subtexto bajo Anular) además de Salir y Guardar cuando corresponda, y MUST ver "Confirmar turno" solo cuando el turno está `PROGRAMADO` y su fecha civil de clínica es hoy. El médico MUST ver el detalle en solo lectura, con Llamar paciente (sin efecto, en el lugar de Confirmar) y Salir; MUST NOT ver Guardar, Confirmar ni Anular. Anular y Llamar MUST permanecer sin efecto. Confirmar, cuando está visible, MUST ejecutar la transición de `appointments-confirm`.
+En alta MUST mostrarse solo Salir y Guardar (no Confirmar ni Cancelar). En detalle, Recepcionista y Administrador MUST ver "Cancelar turno" (sin subtexto bajo el botón) solo cuando el turno está `PROGRAMADO` o `CONFIRMADO`, además de Salir y Guardar cuando corresponda, y MUST ver "Confirmar turno" solo cuando el turno está `PROGRAMADO` y su fecha civil de clínica es hoy. El médico MUST ver el detalle en solo lectura, con Llamar paciente (sin efecto, en el lugar de Confirmar) y Salir; MUST NOT ver Guardar, Confirmar ni Cancelar. Llamar MUST permanecer sin efecto. Confirmar, cuando está visible, MUST ejecutar la transición de `appointments-confirm`. Cancelar, cuando está visible, MUST ejecutar la transición de `appointments-cancel`.
 
-#### Scenario: Alta sin Confirmar ni Anular
+#### Scenario: Alta sin Confirmar ni Cancelar
 
 - **WHEN** el popup está en modo Nuevo Turno
-- **THEN** no se muestran Confirmar turno ni Anular turno
+- **THEN** no se muestran Confirmar turno ni Cancelar turno
 
 #### Scenario: Médico solo lectura
 
 - **WHEN** un usuario con rol Médico abre el detalle
 - **THEN** ningún campo es editable y los botones visibles son Llamar paciente y Salir
 
-#### Scenario: Anular sin subtexto
+#### Scenario: Cancelar sin subtexto
 
-- **WHEN** un Recepcionista abre un detalle
-- **THEN** Anular turno no muestra el subtexto de cancelación y notificación
+- **WHEN** un Recepcionista abre un detalle `PROGRAMADO` o `CONFIRMADO`
+- **THEN** Cancelar turno no muestra el subtexto de cancelación y notificación
 
 #### Scenario: Confirmar visible en programado de hoy
 
@@ -231,9 +231,14 @@ En alta MUST mostrarse solo Salir y Guardar (no Confirmar ni Anular). En detalle
 - **WHEN** un Recepcionista o Administrador abre el detalle de un turno que no está `PROGRAMADO` o cuya fecha civil no es hoy
 - **THEN** no se muestra el botón Confirmar turno
 
+#### Scenario: Cancelar oculto si el estado no aplica
+
+- **WHEN** un Recepcionista o Administrador abre el detalle de un turno `ATENDIDO`, `AUSENTE` o `CANCELADO`
+- **THEN** no se muestra el botón Cancelar turno
+
 ### Requirement: Contratos de escritura y detalle de turnos
 
-El sistema SHALL exponer `GET /api/turnos/:id` (detalle con ids, paciente con contacto, tipo, estado, fechas/horas locales de clínica, `notificarMail`), `POST /api/turnos` (alta transaccional) y `PATCH /api/turnos/:id` (edición). POST y PATCH MUST restringirse a Recepcionista y Administrador. GET detalle para Médico MUST limitarse a turnos propios (si no es suyo, 404). PATCH de un turno no PROGRAMADO o con fecha civil &lt; hoy MUST rechazarse con error legible. `GET /api/turnos/primera-vez` SHALL indicar si el par paciente+médico no tiene turnos previos (en edición excluye el propio id). `GET /api/pacientes?documento=` SHALL devolver el paciente con contacto o vacío sin 404. Los catálogos de médicos y especialidades MUST incluir los ids de la relación cruzada.
+El sistema SHALL exponer `GET /api/turnos/:id` (detalle con ids, paciente con contacto, tipo, estado, fechas/horas locales de clínica, `notificarMail`, `motivoCancelacion`), `POST /api/turnos` (alta transaccional) y `PATCH /api/turnos/:id` (edición). POST y PATCH MUST restringirse a Recepcionista y Administrador. GET detalle para Médico MUST limitarse a turnos propios (si no es suyo, 404). PATCH de un turno no PROGRAMADO o con fecha civil &lt; hoy MUST rechazarse con error legible. `GET /api/turnos/primera-vez` SHALL indicar si el par paciente+médico no tiene turnos previos (en edición excluye el propio id). `GET /api/pacientes?documento=` SHALL devolver el paciente con contacto o vacío sin 404. Los catálogos de médicos y especialidades MUST incluir los ids de la relación cruzada.
 
 #### Scenario: Médico no crea por API
 
@@ -244,3 +249,8 @@ El sistema SHALL exponer `GET /api/turnos/:id` (detalle con ids, paciente con co
 
 - **WHEN** `GET /api/pacientes?documento=` no encuentra padrón
 - **THEN** la respuesta es 200 sin paciente (no 404)
+
+#### Scenario: Detalle incluye motivo de cancelación
+
+- **WHEN** un usuario autenticado solicita `GET /api/turnos/:id` de un turno existente
+- **THEN** la respuesta incluye `motivoCancelacion` (texto o nulo)

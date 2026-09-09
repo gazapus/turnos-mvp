@@ -218,3 +218,21 @@ export function confirmarTurno(id: string): Promise<TurnoDetalleDto> {
     method: 'PATCH',
   });
 }
+
+/**
+ * Cancela un turno PROGRAMADO o CONFIRMADO.
+ *
+ * @param id - UUID del turno.
+ * @param motivo - Motivo opcional.
+ * @returns Detalle actualizado.
+ */
+export function cancelarTurno(
+  id: string,
+  motivo?: string,
+): Promise<TurnoDetalleDto> {
+  const body = motivo ? { motivo } : {};
+  return apiFetch<TurnoDetalleDto>(`/api/turnos/${id}/cancelar`, {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+  });
+}

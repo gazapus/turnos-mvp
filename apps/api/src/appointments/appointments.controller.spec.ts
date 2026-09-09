@@ -11,6 +11,7 @@ import { AppointmentsController } from './appointments.controller';
 import { AppointmentsService } from './appointments.service';
 import { JwtAuthGuard } from '../auth';
 import {
+  CANCELAR_TURNO_ESTADO_INVALIDO,
   CONFIRMAR_TURNO_SOLO_HOY,
   CONFIRMAR_TURNO_SOLO_PROGRAMADO,
   clinicDateTimeFromYmdHm,
@@ -498,9 +499,7 @@ describe('AppointmentsService', () => {
       especialidadId: 'esp-1',
     });
     mockCount.mockResolvedValue(2);
-    mockTurnoCreate.mockResolvedValue(
-      detalleEntity({ tipo: 'CONTROL' }),
-    );
+    mockTurnoCreate.mockResolvedValue(detalleEntity({ tipo: 'CONTROL' }));
 
     await service.createTurno(upsertBody(), {
       sub: 'recep-1',
@@ -585,15 +584,11 @@ describe('AppointmentsService', () => {
 
   it('PATCH rechaza un turno con fecha pasada', async () => {
     await expect(
-      service.updateTurno(
-        't1',
-        upsertBody({ fecha: '2020-01-01' }),
-        {
-          sub: 'recep-1',
-          mail: 'r@x.c',
-          rol: RolUsuario.RECEPCIONISTA,
-        },
-      ),
+      service.updateTurno('t1', upsertBody({ fecha: '2020-01-01' }), {
+        sub: 'recep-1',
+        mail: 'r@x.c',
+        rol: RolUsuario.RECEPCIONISTA,
+      }),
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(mockTurnoUpdate).not.toHaveBeenCalled();
   });
@@ -724,6 +719,171 @@ describe('AppointmentsService', () => {
       }),
     );
   });
+
+  it('cancela un PROGRAMADO de fecha pasada sin motivo', async () => {
+    mockTurnoUpdateMany.mockResolvedValue({ count: 1 });
+    mockTurnoFindUnique.mockResolvedValue(
+      detalleEntity({
+        estado: EstadoTurno.CANCELADO,
+        motivoCancelacion: null,
+        fechaInicio: new Date('2020-01-15T13:00:00.000Z'),
+      }),
+    );
+
+    const result = await service.cancelarTurno(
+      't1',
+      {},
+      {
+        sub: 'recep-1',
+        mail: 'r@x.c',
+        rol: RolUsuario.RECEPCIONISTA,
+      },
+    );
+
+    expect(mockTurnoUpdateMany).toHaveBeenCalledWith({
+      where: {
+        id: 't1',
+        estado: {
+          in: [EstadoTurno.PROGRAMADO, EstadoTurno.CONFIRMADO],
+        },
+      },
+      data: {
+        estado: EstadoTurno.CANCELADO,
+        motivoCancelacion: null,
+      },
+    });
+    expect(result.estado).toBe(EstadoTurno.CANCELADO);
+    expect(result.motivoCancelacion).toBeNull();
+  });
+
+  it('cancela un CONFIRMADO persistiendo el motivo', async () => {
+    mockTurnoUpdateMany.mockResolvedValue({ count: 1 });
+    mockTurnoFindUnique.mockResolvedValue(
+      detalleEntity({
+        estado: EstadoTurno.CANCELADO,
+        motivoCancelacion: 'Paciente reprogramó',
+      }),
+    );
+
+    const result = await service.cancelarTurno(
+      't1',
+      { motivo: '  Paciente reprogramó  ' },
+      {
+        sub: 'admin-1',
+        mail: 'a@x.c',
+        rol: RolUsuario.ADMIN,
+      },
+    );
+
+    expect(mockTurnoUpdateMany).toHaveBeenCalledWith({
+      where: {
+        id: 't1',
+        estado: {
+          in: [EstadoTurno.PROGRAMADO, EstadoTurno.CONFIRMADO],
+        },
+      },
+      data: {
+        estado: EstadoTurno.CANCELADO,
+        motivoCancelacion: 'Paciente reprogramó',
+      },
+    });
+    expect(result.motivoCancelacion).toBe('Paciente reprogramó');
+  });
+
+  it('médico no puede cancelar turnos', async () => {
+    await expect(
+      service.cancelarTurno(
+        't1',
+        {},
+        {
+          sub: 'medico-propio',
+          mail: 'm@x.c',
+          rol: RolUsuario.MEDICO,
+        },
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(mockTurnoUpdateMany).not.toHaveBeenCalled();
+  });
+
+  it('cancelar rechaza ATENDIDO, AUSENTE y CANCELADO', async () => {
+    for (const estado of [
+      EstadoTurno.ATENDIDO,
+      EstadoTurno.AUSENTE,
+      EstadoTurno.CANCELADO,
+    ]) {
+      mockTurnoUpdateMany.mockResolvedValue({ count: 0 });
+      mockTurnoFindUnique.mockResolvedValue(detalleEntity({ estado }));
+
+      await expect(
+        service.cancelarTurno(
+          't1',
+          {},
+          {
+            sub: 'recep-1',
+            mail: 'r@x.c',
+            rol: RolUsuario.RECEPCIONISTA,
+          },
+        ),
+      ).rejects.toThrow(CANCELAR_TURNO_ESTADO_INVALIDO);
+    }
+  });
+
+  it('cancelar responde 404 si el turno no existe', async () => {
+    mockTurnoUpdateMany.mockResolvedValue({ count: 0 });
+    mockTurnoFindUnique.mockResolvedValue(null);
+
+    await expect(
+      service.cancelarTurno(
+        'missing',
+        {},
+        {
+          sub: 'recep-1',
+          mail: 'r@x.c',
+          rol: RolUsuario.RECEPCIONISTA,
+        },
+      ),
+    ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('una segunda cancelación no pisa el estado', async () => {
+    mockTurnoUpdateMany
+      .mockResolvedValueOnce({ count: 1 })
+      .mockResolvedValueOnce({ count: 0 });
+    mockTurnoFindUnique
+      .mockResolvedValueOnce(
+        detalleEntity({
+          estado: EstadoTurno.CANCELADO,
+          motivoCancelacion: null,
+        }),
+      )
+      .mockResolvedValueOnce(
+        detalleEntity({
+          estado: EstadoTurno.CANCELADO,
+          motivoCancelacion: null,
+        }),
+      );
+
+    const user = {
+      sub: 'recep-1',
+      mail: 'r@x.c',
+      rol: RolUsuario.RECEPCIONISTA,
+    };
+    await service.cancelarTurno('t1', {}, user);
+    await expect(service.cancelarTurno('t1', {}, user)).rejects.toThrow(
+      CANCELAR_TURNO_ESTADO_INVALIDO,
+    );
+    expect(mockTurnoUpdate).not.toHaveBeenCalled();
+    expect(mockTurnoUpdateMany).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        where: expect.objectContaining({
+          estado: {
+            in: [EstadoTurno.PROGRAMADO, EstadoTurno.CONFIRMADO],
+          },
+        }),
+      }),
+    );
+  });
 });
 
 describe('AppointmentsController', () => {
@@ -732,6 +892,7 @@ describe('AppointmentsController', () => {
     listTurnos: jest.Mock;
     createTurno: jest.Mock;
     confirmarTurno: jest.Mock;
+    cancelarTurno: jest.Mock;
   };
 
   beforeEach(async () => {
@@ -739,6 +900,7 @@ describe('AppointmentsController', () => {
       listTurnos: jest.fn().mockResolvedValue({ items: [] }),
       createTurno: jest.fn(),
       confirmarTurno: jest.fn(),
+      cancelarTurno: jest.fn(),
     };
     const module: TestingModule = await Test.createTestingModule({
       controllers: [AppointmentsController],
@@ -808,5 +970,24 @@ describe('AppointmentsController', () => {
       mail: 'a@b.c',
       rol: 'RECEPCIONISTA',
     });
+  });
+
+  it('delega cancelar al servicio', async () => {
+    service.cancelarTurno.mockResolvedValue({
+      id: 't1',
+      estado: 'CANCELADO',
+    });
+    await controller.cancelar('t1', { motivo: 'Paciente reprogramó' }, {
+      user: { sub: 'u1', mail: 'a@b.c', rol: 'RECEPCIONISTA' },
+    } as never);
+    expect(service.cancelarTurno).toHaveBeenCalledWith(
+      't1',
+      { motivo: 'Paciente reprogramó' },
+      {
+        sub: 'u1',
+        mail: 'a@b.c',
+        rol: 'RECEPCIONISTA',
+      },
+    );
   });
 });

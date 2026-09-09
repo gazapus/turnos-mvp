@@ -25,15 +25,30 @@ type ErrorState = {
   detail: string;
 };
 
+export type ConfirmOptions = {
+  title: string;
+  detail?: string;
+  optionalText?: {
+    label: string;
+    maxLength: number;
+  };
+};
+
+export type ConfirmResult = {
+  accepted: boolean;
+  text: string;
+};
+
 type FeedbackContextValue = {
   toastSuccess: (message: string) => void;
   showError: (friendly: string, detail: string) => void;
+  showConfirm: (options: ConfirmOptions) => Promise<ConfirmResult>;
 };
 
 const FeedbackContext = createContext<FeedbackContextValue | null>(null);
 
 /**
- * Accede al toast de éxito y al dialog de error genéricos.
+ * Accede al toast de éxito y a los dialogs de error y confirmación.
  *
  * @returns API de feedback.
  */
@@ -50,7 +65,7 @@ type FeedbackProviderProps = {
 };
 
 /**
- * Provider de toast de éxito y dialog de error para el shell autenticado.
+ * Provider de toast de éxito y dialogs de error/confirmación para el shell.
  *
  * @param props - Children del layout.
  * @returns Provider con overlays de feedback.
@@ -58,8 +73,13 @@ type FeedbackProviderProps = {
 export function FeedbackProvider({ children }: FeedbackProviderProps) {
   const [toast, setToast] = useState<ToastState | null>(null);
   const [error, setError] = useState<ErrorState | null>(null);
+  const [confirm, setConfirm] = useState<ConfirmOptions | null>(null);
+  const [confirmText, setConfirmText] = useState('');
   const [mounted, setMounted] = useState(false);
   const toastTimers = useRef<number[]>([]);
+  const confirmResolver = useRef<((result: ConfirmResult) => void) | null>(
+    null,
+  );
 
   useEffect(() => {
     setMounted(true);
@@ -89,9 +109,28 @@ export function FeedbackProvider({ children }: FeedbackProviderProps) {
     setError({ friendly, detail });
   }, []);
 
+  const showConfirm = useCallback((options: ConfirmOptions) => {
+    return new Promise<ConfirmResult>((resolve) => {
+      confirmResolver.current?.({ accepted: false, text: '' });
+      confirmResolver.current = resolve;
+      setConfirmText('');
+      setConfirm(options);
+    });
+  }, []);
+
+  const finishConfirm = useCallback((accepted: boolean, text: string) => {
+    confirmResolver.current?.({
+      accepted,
+      text: accepted ? text.trim() : '',
+    });
+    confirmResolver.current = null;
+    setConfirm(null);
+    setConfirmText('');
+  }, []);
+
   const value = useMemo(
-    () => ({ toastSuccess, showError }),
-    [showError, toastSuccess],
+    () => ({ toastSuccess, showError, showConfirm }),
+    [showConfirm, showError, toastSuccess],
   );
 
   return (
@@ -121,11 +160,11 @@ export function FeedbackProvider({ children }: FeedbackProviderProps) {
                 aria-modal="true"
                 aria-labelledby="error-dialog-title"
                 aria-describedby="error-dialog-detail"
-                className="w-full max-w-md rounded-lg border border-border bg-background p-6 text-foreground"
+                className="w-full max-w-md rounded-lg border border-danger bg-background p-6 text-foreground"
               >
                 <h2
                   id="error-dialog-title"
-                  className="font-heading text-lg font-semibold text-on-elevated"
+                  className="font-heading text-lg font-semibold text-danger"
                 >
                   {error.friendly}
                 </h2>
@@ -142,6 +181,73 @@ export function FeedbackProvider({ children }: FeedbackProviderProps) {
                     onClick={() => setError(null)}
                   >
                     Cerrar
+                  </button>
+                </div>
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
+      {mounted && confirm
+        ? createPortal(
+            <div
+              className="fixed inset-0 z-[100] flex items-center justify-center bg-brand/40 p-4"
+              role="presentation"
+            >
+              <div
+                role="alertdialog"
+                aria-modal="true"
+                aria-labelledby="confirm-dialog-title"
+                aria-describedby={
+                  confirm.detail ? 'confirm-dialog-detail' : undefined
+                }
+                className="w-full max-w-md rounded-lg border border-warning bg-background p-6 text-foreground"
+              >
+                <h2
+                  id="confirm-dialog-title"
+                  className="font-heading text-lg font-semibold text-warning"
+                >
+                  {confirm.title}
+                </h2>
+                {confirm.detail ? (
+                  <p
+                    id="confirm-dialog-detail"
+                    className="mt-3 text-sm text-muted-foreground"
+                  >
+                    {confirm.detail}
+                  </p>
+                ) : null}
+                {confirm.optionalText ? (
+                  <div className="mt-4">
+                    <label
+                      htmlFor="confirm-optional-text"
+                      className="mb-1 block text-sm font-medium"
+                    >
+                      {confirm.optionalText.label}
+                    </label>
+                    <textarea
+                      id="confirm-optional-text"
+                      className="min-h-24 w-full rounded-md border border-border bg-input px-3 py-2 text-sm text-input-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      maxLength={confirm.optionalText.maxLength}
+                      value={confirmText}
+                      onChange={(event) => setConfirmText(event.target.value)}
+                    />
+                  </div>
+                ) : null}
+                <div className="mt-6 flex justify-end gap-3">
+                  <button
+                    type="button"
+                    className="cursor-pointer rounded-md border border-border bg-background px-4 py-2 text-sm font-semibold text-foreground hover:bg-muted"
+                    onClick={() => finishConfirm(false, '')}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    className="cursor-pointer rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary-hover"
+                    onClick={() => finishConfirm(true, confirmText)}
+                  >
+                    Aceptar
                   </button>
                 </div>
               </div>

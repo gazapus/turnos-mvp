@@ -147,6 +147,7 @@ export type TurnoDetalleDto = {
   tipo: TipoTurno;
   estado: EstadoTurno;
   notificarMail: boolean;
+  motivoCancelacion: string | null;
 };
 
 /**
@@ -163,6 +164,13 @@ export type UpsertTurnoRequest = {
   horaFin: string;
   tipo: TipoTurno;
   notificarMail: boolean;
+};
+
+/**
+ * Body de PATCH /api/turnos/:id/cancelar.
+ */
+export type CancelarTurnoRequest = {
+  motivo?: string;
 };
 
 /**

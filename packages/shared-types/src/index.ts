@@ -16,6 +16,7 @@ export {
   TIPO_TURNO,
   VISTA_AGENDA,
   type AgendaUrlParams,
+  type CancelarTurnoRequest,
   type DireccionPaginacion,
   type EspecialidadNombreDto,
   type EspecialidadOption,

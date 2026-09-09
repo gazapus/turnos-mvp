@@ -5,14 +5,16 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { FeedbackProvider } from '@/components/ui';
 import { todayYmd } from '@/lib/agenda/fecha-dia';
-import { confirmarTurno } from '@/lib/api/turnos-client';
+import { cancelarTurno, confirmarTurno } from '@/lib/api/turnos-client';
 import { TurnoAcciones } from './turno-acciones';
 
 vi.mock('@/lib/api/turnos-client', () => ({
   confirmarTurno: vi.fn(),
+  cancelarTurno: vi.fn(),
 }));
 
 const mockConfirmarTurno = vi.mocked(confirmarTurno);
+const mockCancelarTurno = vi.mocked(cancelarTurno);
 
 /**
  * Render con FeedbackProvider.
@@ -48,7 +50,7 @@ describe('TurnoAcciones', () => {
     ).toBeInTheDocument();
   });
 
-  it('oculta confirmar si la fecha no es hoy', () => {
+  it('oculta confirmar si la fecha no es hoy y sigue mostrando cancelar', () => {
     renderAcciones(
       <TurnoAcciones
         rol="RECEPCIONISTA"
@@ -66,7 +68,7 @@ describe('TurnoAcciones', () => {
     ).toBeInTheDocument();
   });
 
-  it('oculta confirmar si el turno ya está confirmado', () => {
+  it('oculta confirmar si el turno ya está confirmado y muestra cancelar', () => {
     renderAcciones(
       <TurnoAcciones
         rol="RECEPCIONISTA"
@@ -76,6 +78,57 @@ describe('TurnoAcciones', () => {
         onConfirmado={vi.fn()}
       />,
     );
+    expect(
+      screen.queryByRole('button', { name: /confirmar paciente/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /cancelar turno/i }),
+    ).toBeInTheDocument();
+  });
+
+  it('oculta cancelar en ATENDIDO, AUSENTE y CANCELADO', () => {
+    const { rerender } = renderAcciones(
+      <TurnoAcciones
+        rol="RECEPCIONISTA"
+        estado="ATENDIDO"
+        fecha={todayYmd()}
+        turnoId="t1"
+        onConfirmado={vi.fn()}
+      />,
+    );
+    expect(
+      screen.queryByRole('button', { name: /cancelar turno/i }),
+    ).not.toBeInTheDocument();
+
+    rerender(
+      <FeedbackProvider>
+        <TurnoAcciones
+          rol="RECEPCIONISTA"
+          estado="AUSENTE"
+          fecha={todayYmd()}
+          turnoId="t1"
+          onConfirmado={vi.fn()}
+        />
+      </FeedbackProvider>,
+    );
+    expect(
+      screen.queryByRole('button', { name: /cancelar turno/i }),
+    ).not.toBeInTheDocument();
+
+    rerender(
+      <FeedbackProvider>
+        <TurnoAcciones
+          rol="RECEPCIONISTA"
+          estado="CANCELADO"
+          fecha={todayYmd()}
+          turnoId="t1"
+          onConfirmado={vi.fn()}
+        />
+      </FeedbackProvider>,
+    );
+    expect(
+      screen.queryByRole('button', { name: /cancelar turno/i }),
+    ).not.toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: /confirmar paciente/i }),
     ).not.toBeInTheDocument();
@@ -99,6 +152,9 @@ describe('TurnoAcciones', () => {
     ).toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: /confirmar paciente/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /cancelar turno/i }),
     ).not.toBeInTheDocument();
   });
 
@@ -127,11 +183,40 @@ describe('TurnoAcciones', () => {
     ).toBeInTheDocument();
   });
 
-  it('Cancelar, Llamar y Finalizar no llaman al backend', async () => {
+  it('cancela tras aceptar en el dialog y no abre el detalle', async () => {
     const user = userEvent.setup();
-    mockConfirmarTurno.mockResolvedValue({} as never);
+    const onConfirmado = vi.fn();
+    mockCancelarTurno.mockResolvedValue({} as never);
 
-    const { rerender } = renderAcciones(
+    renderAcciones(
+      <TurnoAcciones
+        rol="RECEPCIONISTA"
+        estado="PROGRAMADO"
+        fecha={todayYmd()}
+        turnoId="t1"
+        onConfirmado={onConfirmado}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: /cancelar turno/i }));
+    expect(mockCancelarTurno).not.toHaveBeenCalled();
+    await user.type(
+      screen.getByLabelText(/motivo \(opcional\)/i),
+      'Paciente reprogramó',
+    );
+    await user.click(screen.getByRole('button', { name: /^aceptar$/i }));
+    expect(mockCancelarTurno).toHaveBeenCalledWith('t1', 'Paciente reprogramó');
+    expect(onConfirmado).toHaveBeenCalledTimes(1);
+    expect(
+      await screen.findByText(/turno cancelado correctamente/i),
+    ).toBeInTheDocument();
+  });
+
+  it('Cancelar del dialog no llama API', async () => {
+    const user = userEvent.setup();
+    mockCancelarTurno.mockResolvedValue({} as never);
+
+    renderAcciones(
       <TurnoAcciones
         rol="RECEPCIONISTA"
         estado="PROGRAMADO"
@@ -142,22 +227,29 @@ describe('TurnoAcciones', () => {
     );
 
     await user.click(screen.getByRole('button', { name: /cancelar turno/i }));
-    expect(mockConfirmarTurno).not.toHaveBeenCalled();
+    await user.click(screen.getByRole('button', { name: /^cancelar$/i }));
+    expect(mockCancelarTurno).not.toHaveBeenCalled();
+  });
 
-    rerender(
-      <FeedbackProvider>
-        <TurnoAcciones
-          rol="MEDICO"
-          estado="PROGRAMADO"
-          fecha={todayYmd()}
-          turnoId="t1"
-          onConfirmado={vi.fn()}
-        />
-      </FeedbackProvider>,
+  it('Llamar y Finalizar no llaman al backend', async () => {
+    const user = userEvent.setup();
+    mockConfirmarTurno.mockResolvedValue({} as never);
+
+    renderAcciones(
+      <TurnoAcciones
+        rol="MEDICO"
+        estado="PROGRAMADO"
+        fecha={todayYmd()}
+        turnoId="t1"
+        onConfirmado={vi.fn()}
+      />,
     );
 
-    await user.click(screen.getByRole('button', { name: /llamar al paciente/i }));
+    await user.click(
+      screen.getByRole('button', { name: /llamar al paciente/i }),
+    );
     await user.click(screen.getByRole('button', { name: /finalizar turno/i }));
     expect(mockConfirmarTurno).not.toHaveBeenCalled();
+    expect(mockCancelarTurno).not.toHaveBeenCalled();
   });
 });

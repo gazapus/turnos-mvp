@@ -29,10 +29,13 @@ describe('TurnoDiaCard', () => {
     cleanup();
   });
 
-  it('no muestra un control de confirmar sobre la card', () => {
+  it('no muestra un control de confirmar ni de cancelar sobre la card', () => {
     render(<TurnoDiaCard turno={turnoHoy()} />);
     expect(
       screen.queryByRole('button', { name: /confirmar/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /cancelar/i }),
     ).not.toBeInTheDocument();
   });
 });

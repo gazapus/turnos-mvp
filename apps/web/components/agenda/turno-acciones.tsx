@@ -3,7 +3,9 @@
 import type { AuthRole, EstadoTurno } from '@turnos/shared-types';
 import { Check, Phone, X } from 'lucide-react';
 
+import { canCancelarTurno } from '@/lib/agenda/can-cancelar-turno';
 import { canConfirmarTurno } from '@/lib/agenda/can-confirmar-turno';
+import { useCancelarTurno } from './use-cancelar-turno';
 import { useConfirmarTurno } from './use-confirmar-turno';
 
 type TurnoAccionesProps = {
@@ -27,9 +29,9 @@ const BOTON_ACCION_BASE =
   'inline-flex cursor-pointer items-center justify-center rounded-full border border-border bg-surface p-2 transition-all duration-200 ease-out hover:scale-110 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100';
 
 /**
- * Botones de acción por rol. Confirmar ejecuta la transición; el resto es stub.
+ * Botones de acción por rol. Confirmar y Cancelar ejecutan la transición.
  *
- * @param props - Rol, turno y callback tras confirmar.
+ * @param props - Rol, turno y callback tras confirmar o cancelar.
  * @returns Icon buttons circulares con tooltip según rol.
  */
 export function TurnoAcciones({
@@ -39,8 +41,11 @@ export function TurnoAcciones({
   turnoId,
   onConfirmado,
 }: TurnoAccionesProps) {
-  const { confirmar, pending } = useConfirmarTurno();
+  const { confirmar, pending: confirming } = useConfirmarTurno();
+  const { cancelar, pending: canceling } = useCancelarTurno();
+  const pending = confirming || canceling;
   const showConfirmar = canConfirmarTurno({ rol, estado, fecha });
+  const showCancelar = canCancelarTurno({ rol, estado });
 
   /**
    * Confirma sin abrir el detalle de la fila.
@@ -52,6 +57,21 @@ export function TurnoAcciones({
   }): Promise<void> {
     event.stopPropagation();
     const ok = await confirmar(turnoId);
+    if (ok) {
+      onConfirmado();
+    }
+  }
+
+  /**
+   * Abre confirmación de cancelar sin abrir el detalle.
+   *
+   * @param event - Click del ícono.
+   */
+  async function handleCancelar(event: {
+    stopPropagation: () => void;
+  }): Promise<void> {
+    event.stopPropagation();
+    const ok = await cancelar(turnoId);
     if (ok) {
       onConfirmado();
     }
@@ -94,14 +114,18 @@ export function TurnoAcciones({
           <Check className="size-[1.3rem]" aria-hidden />
         </button>
       ) : null}
-      <button
-        type="button"
-        title="Cancelar turno"
-        aria-label="Cancelar turno"
-        className={`${BOTON_ACCION_BASE} text-danger hover:border-danger/40 hover:bg-danger/10`}
-      >
-        <X className="size-[1.3rem]" aria-hidden />
-      </button>
+      {showCancelar ? (
+        <button
+          type="button"
+          title="Cancelar turno"
+          aria-label="Cancelar turno"
+          disabled={pending}
+          className={`${BOTON_ACCION_BASE} text-danger hover:border-danger/40 hover:bg-danger/10`}
+          onClick={handleCancelar}
+        >
+          <X className="size-[1.3rem]" aria-hidden />
+        </button>
+      ) : null}
     </div>
   );
 }
