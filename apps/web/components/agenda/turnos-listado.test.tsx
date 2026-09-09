@@ -11,13 +11,17 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { TurnoListItemDto } from '@turnos/shared-types';
-import { fetchTurnos } from '@/lib/api/turnos-client';
+import { FeedbackProvider } from '@/components/ui';
+import { todayYmd } from '@/lib/agenda/fecha-dia';
+import { confirmarTurno, fetchTurnos } from '@/lib/api/turnos-client';
 import { TurnosListado } from './turnos-listado';
 
 const mockFetchTurnos = vi.mocked(fetchTurnos);
+const mockConfirmarTurno = vi.mocked(confirmarTurno);
 
 vi.mock('@/lib/api/turnos-client', () => ({
   fetchTurnos: vi.fn(),
+  confirmarTurno: vi.fn(),
 }));
 
 const listaParams = {
@@ -76,7 +80,9 @@ function renderWithQuery(ui: ReactElement) {
     defaultOptions: { queries: { retry: false } },
   });
   return render(
-    <QueryClientProvider client={client}>{ui}</QueryClientProvider>,
+    <QueryClientProvider client={client}>
+      <FeedbackProvider>{ui}</FeedbackProvider>
+    </QueryClientProvider>,
   );
 }
 
@@ -98,6 +104,7 @@ describe('TurnosListado', () => {
         rol="RECEPCIONISTA"
         params={listaParams}
         onAbrirTurno={vi.fn()}
+        onConfirmado={vi.fn()}
       />,
     );
 
@@ -123,6 +130,7 @@ describe('TurnosListado', () => {
           soloPendientes: true,
         }}
         onAbrirTurno={vi.fn()}
+        onConfirmado={vi.fn()}
       />,
     );
 
@@ -147,6 +155,7 @@ describe('TurnosListado', () => {
         rol="RECEPCIONISTA"
         params={listaParams}
         onAbrirTurno={vi.fn()}
+        onConfirmado={vi.fn()}
       />,
     );
 
@@ -178,6 +187,7 @@ describe('TurnosListado', () => {
         rol="RECEPCIONISTA"
         params={listaParams}
         onAbrirTurno={vi.fn()}
+        onConfirmado={vi.fn()}
       />,
     );
 
@@ -211,6 +221,7 @@ describe('TurnosListado', () => {
         rol="RECEPCIONISTA"
         params={listaParams}
         onAbrirTurno={vi.fn()}
+        onConfirmado={vi.fn()}
       />,
     );
 
@@ -242,6 +253,7 @@ describe('TurnosListado', () => {
         rol="RECEPCIONISTA"
         params={listaParams}
         onAbrirTurno={vi.fn()}
+        onConfirmado={vi.fn()}
       />,
     );
 
@@ -277,6 +289,7 @@ describe('TurnosListado', () => {
         rol="RECEPCIONISTA"
         params={listaParams}
         onAbrirTurno={onAbrirTurno}
+        onConfirmado={vi.fn()}
       />,
     );
 
@@ -287,5 +300,31 @@ describe('TurnosListado', () => {
     onAbrirTurno.mockClear();
     await user.click(screen.getByRole('button', { name: /cancelar turno/i }));
     expect(onAbrirTurno).not.toHaveBeenCalled();
+  });
+
+  it('click en Confirmar no abre el detalle', async () => {
+    const user = userEvent.setup();
+    const onAbrirTurno = vi.fn();
+    mockConfirmarTurno.mockResolvedValue({} as never);
+    mockFetchTurnos.mockResolvedValue({
+      items: [{ ...listItem('t1'), fecha: todayYmd() }],
+      cursorSiguiente: null,
+      cursorAnterior: null,
+    });
+
+    renderWithQuery(
+      <TurnosListado
+        rol="RECEPCIONISTA"
+        params={listaParams}
+        onAbrirTurno={onAbrirTurno}
+        onConfirmado={vi.fn()}
+      />,
+    );
+
+    await user.click(
+      await screen.findByRole('button', { name: /confirmar paciente/i }),
+    );
+    expect(onAbrirTurno).not.toHaveBeenCalled();
+    expect(mockConfirmarTurno).toHaveBeenCalledWith('t1');
   });
 });

@@ -7,12 +7,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { FeedbackProvider } from '@/components/ui';
 import { todayYmd } from '@/lib/agenda/fecha-dia';
+import { ApiError } from '@/lib/api/auth-client';
 import {
   fetchEspecialidades,
   fetchMedicos,
   fetchPacienteByDocumento,
   fetchPrimeraVez,
   fetchTurnoById,
+  confirmarTurno,
 } from '@/lib/api/turnos-client';
 import { TurnoFormDialog, type TurnoFormMode } from './turno-form-dialog';
 
@@ -24,6 +26,7 @@ vi.mock('@/lib/api/turnos-client', () => ({
   fetchPrimeraVez: vi.fn(),
   createTurno: vi.fn(),
   updateTurno: vi.fn(),
+  confirmarTurno: vi.fn(),
 }));
 
 const mockFetchMedicos = vi.mocked(fetchMedicos);
@@ -31,6 +34,7 @@ const mockFetchEspecialidades = vi.mocked(fetchEspecialidades);
 const mockFetchPacienteByDocumento = vi.mocked(fetchPacienteByDocumento);
 const mockFetchTurnoById = vi.mocked(fetchTurnoById);
 const mockFetchPrimeraVez = vi.mocked(fetchPrimeraVez);
+const mockConfirmarTurno = vi.mocked(confirmarTurno);
 
 const recepcionista: AuthUser = {
   id: 'r1',
@@ -335,5 +339,156 @@ describe('TurnoFormDialog', () => {
     expect(await screen.findByTestId('turno-form-overlay')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /cerrar/i }));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('no muestra Confirmar en alta', async () => {
+    renderDialog(
+      <TurnoFormDialog
+        open
+        mode={{ kind: 'create' }}
+        user={recepcionista}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    );
+
+    await screen.findByRole('heading', { name: /nuevo turno/i });
+    expect(
+      screen.queryByRole('button', { name: /confirmar turno/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('muestra Confirmar en un PROGRAMADO de hoy', async () => {
+    renderDialog(
+      <TurnoFormDialog
+        open
+        mode={{ kind: 'detail', turnoId: 't1' }}
+        user={recepcionista}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    );
+
+    expect(
+      await screen.findByRole('button', { name: /confirmar turno/i }),
+    ).toBeInTheDocument();
+  });
+
+  it('oculta Confirmar si el turno no es de hoy', async () => {
+    mockFetchTurnoById.mockResolvedValue({
+      ...detalle,
+      fecha: '2099-01-15',
+    });
+
+    renderDialog(
+      <TurnoFormDialog
+        open
+        mode={{ kind: 'detail', turnoId: 't1' }}
+        user={recepcionista}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    );
+
+    await screen.findByRole('heading', { name: /detalle de turno/i });
+    expect(
+      screen.queryByRole('button', { name: /confirmar turno/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('oculta Confirmar si el turno no está PROGRAMADO', async () => {
+    mockFetchTurnoById.mockResolvedValue({
+      ...detalle,
+      estado: 'CONFIRMADO',
+    });
+
+    renderDialog(
+      <TurnoFormDialog
+        open
+        mode={{ kind: 'detail', turnoId: 't1' }}
+        user={recepcionista}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    );
+
+    await screen.findByRole('heading', { name: /detalle de turno/i });
+    expect(
+      screen.queryByRole('button', { name: /confirmar turno/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('éxito de confirmar cierra el popup y llama onSaved', async () => {
+    const user = userEvent.setup();
+    const onSaved = vi.fn();
+    mockConfirmarTurno.mockResolvedValue({ ...detalle, estado: 'CONFIRMADO' });
+
+    /**
+     * Controla `open` para simular el cierre del padre.
+     *
+     * @returns Dialog de detalle.
+     */
+    function Harness() {
+      const [open, setOpen] = useState(true);
+      const mode: TurnoFormMode = { kind: 'detail', turnoId: 't1' };
+      return (
+        <TurnoFormDialog
+          open={open}
+          mode={open ? mode : null}
+          user={recepcionista}
+          onClose={() => setOpen(false)}
+          onSaved={onSaved}
+        />
+      );
+    }
+
+    renderDialog(<Harness />);
+    await user.click(
+      await screen.findByRole('button', { name: /confirmar turno/i }),
+    );
+
+    expect(mockConfirmarTurno).toHaveBeenCalledWith('t1');
+    expect(onSaved).toHaveBeenCalledTimes(1);
+    expect(
+      await screen.findByText(/turno confirmado correctamente/i),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('error de confirmar deja el popup abierto', async () => {
+    const user = userEvent.setup();
+    const onSaved = vi.fn();
+    mockConfirmarTurno.mockRejectedValue(
+      new ApiError({
+        statusCode: 400,
+        message: 'Solo se pueden confirmar turnos del día de hoy',
+        error: 'Bad Request',
+        path: '/api/turnos/t1/confirmar',
+        timestamp: new Date().toISOString(),
+      }),
+    );
+
+    renderDialog(
+      <TurnoFormDialog
+        open
+        mode={{ kind: 'detail', turnoId: 't1' }}
+        user={recepcionista}
+        onClose={vi.fn()}
+        onSaved={onSaved}
+      />,
+    );
+
+    await user.click(
+      await screen.findByRole('button', { name: /confirmar turno/i }),
+    );
+
+    expect(
+      await screen.findByText(/no se pudo confirmar el turno/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/solo se pueden confirmar turnos del día de hoy/i),
+    ).toBeInTheDocument();
+    expect(onSaved).not.toHaveBeenCalled();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
 });

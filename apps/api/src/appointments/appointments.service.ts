@@ -14,10 +14,13 @@ import {
 import type { DireccionPaginacion } from '@turnos/shared-types';
 import type { JwtPayload } from '../auth';
 import {
+  CONFIRMAR_TURNO_SOLO_HOY,
+  CONFIRMAR_TURNO_SOLO_PROGRAMADO,
   CURSOR_NIL_UUID,
   clinicDayRangeFromYmd,
   formatClinicDate,
   isClinicDateBeforeToday,
+  isClinicDateToday,
   normalizeDocumento,
   resolveTurnoDateRange,
   startOfClinicDay,
@@ -245,6 +248,58 @@ export class AppointmentsService {
     });
 
     return TurnoDetalleResponseDto.fromEntity(updated);
+  }
+
+  /**
+   * Confirma un turno PROGRAMADO del día civil de hoy.
+   *
+   * @param id - UUID del turno.
+   * @param user - Usuario autenticado.
+   * @returns Detalle con estado CONFIRMADO.
+   */
+  async confirmarTurno(
+    id: string,
+    user: JwtPayload,
+  ): Promise<TurnoDetalleResponseDto> {
+    this.assertCanWrite(user);
+
+    const today = formatClinicDate(new Date());
+    const range = clinicDayRangeFromYmd(today);
+    if (!range) {
+      throw new BadRequestException(CONFIRMAR_TURNO_SOLO_HOY);
+    }
+
+    const updated = await prisma.turno.updateMany({
+      where: {
+        id,
+        estado: EstadoTurno.PROGRAMADO,
+        fechaInicio: { gte: range.start, lt: range.end },
+      },
+      data: { estado: EstadoTurno.CONFIRMADO },
+    });
+
+    if (updated.count === 0) {
+      const existing = await prisma.turno.findUnique({ where: { id } });
+      if (!existing) {
+        throw new NotFoundException('Turno no encontrado');
+      }
+      if (existing.estado !== EstadoTurno.PROGRAMADO) {
+        throw new BadRequestException(CONFIRMAR_TURNO_SOLO_PROGRAMADO);
+      }
+      if (!isClinicDateToday(formatClinicDate(existing.fechaInicio))) {
+        throw new BadRequestException(CONFIRMAR_TURNO_SOLO_HOY);
+      }
+      throw new BadRequestException('No se pudo confirmar el turno');
+    }
+
+    const turno = await prisma.turno.findUnique({
+      where: { id },
+      include: TURNO_DETALLE_INCLUDE,
+    });
+    if (!turno) {
+      throw new NotFoundException('Turno no encontrado');
+    }
+    return TurnoDetalleResponseDto.fromEntity(turno);
   }
 
   /**

@@ -206,3 +206,15 @@ export function updateTurno(
     body: JSON.stringify(body),
   });
 }
+
+/**
+ * Confirma un turno PROGRAMADO del día de hoy.
+ *
+ * @param id - UUID del turno.
+ * @returns Detalle actualizado.
+ */
+export function confirmarTurno(id: string): Promise<TurnoDetalleDto> {
+  return apiFetch<TurnoDetalleDto>(`/api/turnos/${id}/confirmar`, {
+    method: 'PATCH',
+  });
+}

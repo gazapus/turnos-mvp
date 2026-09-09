@@ -1,8 +1,17 @@
-import type { AuthRole } from '@turnos/shared-types';
+'use client';
+
+import type { AuthRole, EstadoTurno } from '@turnos/shared-types';
 import { Check, Phone, X } from 'lucide-react';
+
+import { canConfirmarTurno } from '@/lib/agenda/can-confirmar-turno';
+import { useConfirmarTurno } from './use-confirmar-turno';
 
 type TurnoAccionesProps = {
   rol: AuthRole;
+  estado: EstadoTurno;
+  fecha: string;
+  turnoId: string;
+  onConfirmado: () => void;
 };
 
 /**
@@ -14,22 +23,40 @@ function stopRowClick(event: { stopPropagation: () => void }): void {
   event.stopPropagation();
 }
 
-/**
- * Botones de acción estáticos por rol (sin handlers funcionales).
- *
- * @param props - Rol del usuario autenticado.
- * @returns Icon buttons con tooltip según rol.
- */
 const BOTON_ACCION_BASE =
-  'inline-flex cursor-pointer items-center justify-center rounded-full border border-border bg-surface p-2 transition-all duration-200 ease-out hover:scale-110 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
+  'inline-flex cursor-pointer items-center justify-center rounded-full border border-border bg-surface p-2 transition-all duration-200 ease-out hover:scale-110 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100';
 
 /**
- * Botones de acción estáticos por rol (sin handlers funcionales).
+ * Botones de acción por rol. Confirmar ejecuta la transición; el resto es stub.
  *
- * @param props - Rol del usuario autenticado.
- * @returns Icon buttons circulares con animación de hover y tooltip según rol.
+ * @param props - Rol, turno y callback tras confirmar.
+ * @returns Icon buttons circulares con tooltip según rol.
  */
-export function TurnoAcciones({ rol }: TurnoAccionesProps) {
+export function TurnoAcciones({
+  rol,
+  estado,
+  fecha,
+  turnoId,
+  onConfirmado,
+}: TurnoAccionesProps) {
+  const { confirmar, pending } = useConfirmarTurno();
+  const showConfirmar = canConfirmarTurno({ rol, estado, fecha });
+
+  /**
+   * Confirma sin abrir el detalle de la fila.
+   *
+   * @param event - Click del ícono.
+   */
+  async function handleConfirmar(event: {
+    stopPropagation: () => void;
+  }): Promise<void> {
+    event.stopPropagation();
+    const ok = await confirmar(turnoId);
+    if (ok) {
+      onConfirmado();
+    }
+  }
+
   if (rol === 'MEDICO') {
     return (
       <div className="flex items-center gap-2" onClick={stopRowClick}>
@@ -55,14 +82,18 @@ export function TurnoAcciones({ rol }: TurnoAccionesProps) {
 
   return (
     <div className="flex items-center gap-2" onClick={stopRowClick}>
-      <button
-        type="button"
-        title="Confirmar paciente"
-        aria-label="Confirmar paciente"
-        className={`${BOTON_ACCION_BASE} text-on-elevated hover:border-on-elevated/40 hover:bg-on-elevated/10`}
-      >
-        <Check className="size-[1.3rem]" aria-hidden />
-      </button>
+      {showConfirmar ? (
+        <button
+          type="button"
+          title="Confirmar paciente"
+          aria-label="Confirmar paciente"
+          disabled={pending}
+          className={`${BOTON_ACCION_BASE} text-on-elevated hover:border-on-elevated/40 hover:bg-on-elevated/10`}
+          onClick={handleConfirmar}
+        >
+          <Check className="size-[1.3rem]" aria-hidden />
+        </button>
+      ) : null}
       <button
         type="button"
         title="Cancelar turno"

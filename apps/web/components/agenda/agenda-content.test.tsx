@@ -39,6 +39,7 @@ vi.mock('@/lib/api/turnos-client', () => ({
   fetchPrimeraVez: vi.fn().mockResolvedValue({ primeraVez: true }),
   createTurno: vi.fn(),
   updateTurno: vi.fn(),
+  confirmarTurno: vi.fn(),
 }));
 
 const recepcionista: AuthUser = {

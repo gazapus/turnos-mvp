@@ -213,6 +213,26 @@ export function isClinicDateBeforeToday(ymd: string): boolean {
 }
 
 /**
+ * Indica si la fecha civil coincide con hoy en la clínica.
+ *
+ * @param ymd - Fecha YYYY-MM-DD.
+ * @param now - Instante de referencia.
+ * @returns true si ymd es hoy.
+ */
+export function isClinicDateToday(
+  ymd: string,
+  now: Date = new Date(),
+): boolean {
+  return ymd === formatClinicDate(now);
+}
+
+export const CONFIRMAR_TURNO_SOLO_PROGRAMADO =
+  'Solo se pueden confirmar turnos en estado Programado' as const;
+
+export const CONFIRMAR_TURNO_SOLO_HOY =
+  'Solo se pueden confirmar turnos del día de hoy' as const;
+
+/**
  * Normaliza un documento a dígitos.
  *
  * @param raw - Valor ingresado.

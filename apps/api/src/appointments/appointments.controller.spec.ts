@@ -10,13 +10,21 @@ import { EstadoTurno, RolUsuario, TipoTurno } from '@turnos/database';
 import { AppointmentsController } from './appointments.controller';
 import { AppointmentsService } from './appointments.service';
 import { JwtAuthGuard } from '../auth';
-import { startOfClinicDay } from './appointments.constants';
+import {
+  CONFIRMAR_TURNO_SOLO_HOY,
+  CONFIRMAR_TURNO_SOLO_PROGRAMADO,
+  clinicDateTimeFromYmdHm,
+  clinicDayRangeFromYmd,
+  formatClinicDate,
+  startOfClinicDay,
+} from './appointments.constants';
 
 const mockFindMany = jest.fn();
 const mockCount = jest.fn();
 const mockTurnoFindUnique = jest.fn();
 const mockTurnoCreate = jest.fn();
 const mockTurnoUpdate = jest.fn();
+const mockTurnoUpdateMany = jest.fn();
 const mockPacienteFindUnique = jest.fn();
 const mockPacienteCreate = jest.fn();
 const mockUsuarioFindUnique = jest.fn();
@@ -117,6 +125,9 @@ jest.mock('@turnos/database', () => {
       get update() {
         return mockTurnoUpdate;
       },
+      get updateMany() {
+        return mockTurnoUpdateMany;
+      },
     },
     paciente: {
       get findUnique() {
@@ -174,6 +185,7 @@ describe('AppointmentsService', () => {
     mockTurnoFindUnique.mockReset();
     mockTurnoCreate.mockReset();
     mockTurnoUpdate.mockReset();
+    mockTurnoUpdateMany.mockReset();
     mockPacienteFindUnique.mockReset();
     mockPacienteCreate.mockReset();
     mockUsuarioFindUnique.mockReset();
@@ -585,16 +597,148 @@ describe('AppointmentsService', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(mockTurnoUpdate).not.toHaveBeenCalled();
   });
+
+  it('confirma un PROGRAMADO de hoy', async () => {
+    const today = formatClinicDate(new Date());
+    const range = clinicDayRangeFromYmd(today);
+    const start = clinicDateTimeFromYmdHm(today, '10:00');
+    mockTurnoUpdateMany.mockResolvedValue({ count: 1 });
+    mockTurnoFindUnique.mockResolvedValue(
+      detalleEntity({
+        estado: EstadoTurno.CONFIRMADO,
+        fechaInicio: start,
+      }),
+    );
+
+    const result = await service.confirmarTurno('t1', {
+      sub: 'recep-1',
+      mail: 'r@x.c',
+      rol: RolUsuario.RECEPCIONISTA,
+    });
+
+    expect(mockTurnoUpdateMany).toHaveBeenCalledWith({
+      where: {
+        id: 't1',
+        estado: EstadoTurno.PROGRAMADO,
+        fechaInicio: { gte: range?.start, lt: range?.end },
+      },
+      data: { estado: EstadoTurno.CONFIRMADO },
+    });
+    expect(result.estado).toBe(EstadoTurno.CONFIRMADO);
+  });
+
+  it('médico no puede confirmar turnos', async () => {
+    await expect(
+      service.confirmarTurno('t1', {
+        sub: 'medico-propio',
+        mail: 'm@x.c',
+        rol: RolUsuario.MEDICO,
+      }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(mockTurnoUpdateMany).not.toHaveBeenCalled();
+  });
+
+  it('confirmar rechaza un turno que no es de hoy', async () => {
+    mockTurnoUpdateMany.mockResolvedValue({ count: 0 });
+    mockTurnoFindUnique.mockResolvedValue(
+      detalleEntity({ estado: EstadoTurno.PROGRAMADO }),
+    );
+
+    await expect(
+      service.confirmarTurno('t1', {
+        sub: 'recep-1',
+        mail: 'r@x.c',
+        rol: RolUsuario.RECEPCIONISTA,
+      }),
+    ).rejects.toThrow(CONFIRMAR_TURNO_SOLO_HOY);
+  });
+
+  it('confirmar rechaza un turno ya CONFIRMADO', async () => {
+    const today = formatClinicDate(new Date());
+    const start = clinicDateTimeFromYmdHm(today, '10:00');
+    mockTurnoUpdateMany.mockResolvedValue({ count: 0 });
+    mockTurnoFindUnique.mockResolvedValue(
+      detalleEntity({
+        estado: EstadoTurno.CONFIRMADO,
+        fechaInicio: start,
+      }),
+    );
+
+    await expect(
+      service.confirmarTurno('t1', {
+        sub: 'recep-1',
+        mail: 'r@x.c',
+        rol: RolUsuario.RECEPCIONISTA,
+      }),
+    ).rejects.toThrow(CONFIRMAR_TURNO_SOLO_PROGRAMADO);
+  });
+
+  it('confirmar responde 404 si el turno no existe', async () => {
+    mockTurnoUpdateMany.mockResolvedValue({ count: 0 });
+    mockTurnoFindUnique.mockResolvedValue(null);
+
+    await expect(
+      service.confirmarTurno('missing', {
+        sub: 'recep-1',
+        mail: 'r@x.c',
+        rol: RolUsuario.RECEPCIONISTA,
+      }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('una segunda confirmación no pisa el estado', async () => {
+    const today = formatClinicDate(new Date());
+    const start = clinicDateTimeFromYmdHm(today, '10:00');
+    mockTurnoUpdateMany
+      .mockResolvedValueOnce({ count: 1 })
+      .mockResolvedValueOnce({ count: 0 });
+    mockTurnoFindUnique
+      .mockResolvedValueOnce(
+        detalleEntity({
+          estado: EstadoTurno.CONFIRMADO,
+          fechaInicio: start,
+        }),
+      )
+      .mockResolvedValueOnce(
+        detalleEntity({
+          estado: EstadoTurno.CONFIRMADO,
+          fechaInicio: start,
+        }),
+      );
+
+    const user = {
+      sub: 'recep-1',
+      mail: 'r@x.c',
+      rol: RolUsuario.RECEPCIONISTA,
+    };
+    await service.confirmarTurno('t1', user);
+    await expect(service.confirmarTurno('t1', user)).rejects.toThrow(
+      CONFIRMAR_TURNO_SOLO_PROGRAMADO,
+    );
+    expect(mockTurnoUpdate).not.toHaveBeenCalled();
+    expect(mockTurnoUpdateMany).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        where: expect.objectContaining({ estado: EstadoTurno.PROGRAMADO }),
+        data: { estado: EstadoTurno.CONFIRMADO },
+      }),
+    );
+  });
 });
 
 describe('AppointmentsController', () => {
   let controller: AppointmentsController;
-  let service: { listTurnos: jest.Mock; createTurno: jest.Mock };
+  let service: {
+    listTurnos: jest.Mock;
+    createTurno: jest.Mock;
+    confirmarTurno: jest.Mock;
+  };
 
   beforeEach(async () => {
     service = {
       listTurnos: jest.fn().mockResolvedValue({ items: [] }),
       createTurno: jest.fn(),
+      confirmarTurno: jest.fn(),
     };
     const module: TestingModule = await Test.createTestingModule({
       controllers: [AppointmentsController],
@@ -649,5 +793,20 @@ describe('AppointmentsController', () => {
       user: { sub: 'u1', mail: 'a@b.c', rol: 'RECEPCIONISTA' },
     } as never);
     expect(service.createTurno).toHaveBeenCalled();
+  });
+
+  it('delega confirmar al servicio', async () => {
+    service.confirmarTurno.mockResolvedValue({
+      id: 't1',
+      estado: 'CONFIRMADO',
+    });
+    await controller.confirmar('t1', {
+      user: { sub: 'u1', mail: 'a@b.c', rol: 'RECEPCIONISTA' },
+    } as never);
+    expect(service.confirmarTurno).toHaveBeenCalledWith('t1', {
+      sub: 'u1',
+      mail: 'a@b.c',
+      rol: 'RECEPCIONISTA',
+    });
   });
 });

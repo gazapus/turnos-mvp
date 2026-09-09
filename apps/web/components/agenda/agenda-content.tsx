@@ -86,6 +86,7 @@ function AgendaContentInner({ user, params }: AgendaContentProps) {
               rol={user.rol}
               params={params}
               onAbrirTurno={(turnoId) => setMode({ kind: 'detail', turnoId })}
+              onConfirmado={handleSaved}
             />
           )}
           {params.vista === 'dia' && (

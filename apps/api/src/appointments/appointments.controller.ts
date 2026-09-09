@@ -130,6 +130,30 @@ export class AppointmentsController {
   }
 
   /**
+   * Confirma un turno PROGRAMADO del día de hoy.
+   *
+   * @param id - UUID del turno.
+   * @param req - Request autenticada.
+   * @returns Detalle confirmado.
+   */
+  @Patch(':id/confirmar')
+  @UseGuards(JwtAuthGuard)
+  @ApiCookieAuth(AUTH_COOKIE_NAME)
+  @ApiOperation({ summary: 'Confirmar turno' })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiResponse({ status: 200, type: TurnoDetalleResponseDto })
+  @ApiResponse({ status: 400, description: 'Estado o día inválidos' })
+  @ApiResponse({ status: 401, description: 'No autorizado' })
+  @ApiResponse({ status: 403, description: 'Sin permiso de escritura' })
+  @ApiResponse({ status: 404, description: 'Turno no encontrado' })
+  confirmar(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() req: AuthenticatedRequest,
+  ): Promise<TurnoDetalleResponseDto> {
+    return this.appointmentsService.confirmarTurno(id, this.requireUser(req));
+  }
+
+  /**
    * Edición de un turno programado.
    *
    * @param id - UUID del turno.

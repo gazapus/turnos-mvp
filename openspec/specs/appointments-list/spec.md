@@ -1,6 +1,6 @@
 ## Purpose
 
-Modo de visualización Lista de la Agenda: grilla de turnos con paginación por cursor solo hacia adelante, representación visual de estado y tipo, acciones por rol (stub), contrato de backend `GET /api/turnos` y endpoints de soporte para filtros.
+Modo de visualización Lista de la Agenda: grilla de turnos con paginación por cursor solo hacia adelante, representación visual de estado y tipo, acciones por rol (Confirmar ejecuta la transición de `appointments-confirm`; Cancelar, Llamar y Finalizar siguen stubs), contrato de backend `GET /api/turnos` y endpoints de soporte para filtros.
 
 ## Requirements
 
@@ -41,23 +41,28 @@ El sistema SHALL representar el tipo de cada turno mediante un ícono en la colu
 - **WHEN** un turno tiene tipo Sobreturno o Urgente
 - **THEN** la celda de tipo muestra el ícono de triángulo amarillo con "!" y un tooltip indicando "Urgencia o sobreturno"
 
-### Requirement: Botones de acción por rol, sin lógica de habilitación por estado
+### Requirement: Botones de acción por rol
 
-El sistema SHALL mostrar en la columna "Acciones" botones de tipo icon-button fijos según el rol del usuario autenticado, independientemente del estado del turno: Recepcionista y Administrador ven los botones Confirmar (check azul) y Cancelar (X roja); Médico ve los botones Llamar (ícono de teléfono) y Finalizar (check verde). Cada botón MUST mostrar un tooltip con su nombre de acción. Ningún botón MUST ejecutar una acción real en esta etapa.
+El sistema SHALL mostrar en la columna "Acciones" icon-buttons según el rol del usuario autenticado. Recepcionista y Administrador ven Cancelar (X roja) en toda fila, y Confirmar (check) solo cuando el turno está `PROGRAMADO` y su fecha civil de clínica es hoy; Médico ve Llamar (teléfono) y Finalizar (check verde) en toda fila. Cada botón visible MUST mostrar un tooltip con su nombre de acción. Confirmar MUST ejecutar la transición de `appointments-confirm`. Cancelar, Llamar y Finalizar MUST permanecer stubs (no llaman al backend).
 
-#### Scenario: Acciones para recepcionista o administrador
+#### Scenario: Acciones para recepcionista o administrador en un programado de hoy
 
-- **WHEN** un usuario con rol Recepcionista o Administrador visualiza una fila de turno
+- **WHEN** un usuario con rol Recepcionista o Administrador visualiza una fila de turno `PROGRAMADO` con fecha civil de hoy
 - **THEN** la columna de acciones muestra los botones Confirmar y Cancelar, con tooltips "Confirmar paciente" y "Cancelar turno" respectivamente
+
+#### Scenario: Acciones para recepcionista sin Confirmar fuera de regla
+
+- **WHEN** un usuario con rol Recepcionista o Administrador visualiza una fila que no está `PROGRAMADO` o cuya fecha civil no es hoy
+- **THEN** la columna de acciones muestra Cancelar y no muestra Confirmar
 
 #### Scenario: Acciones para médico
 
 - **WHEN** un usuario con rol Médico visualiza una fila de turno
 - **THEN** la columna de acciones muestra los botones Llamar y Finalizar, con tooltips "Llamar al paciente" y "Finalizar turno" respectivamente
 
-#### Scenario: Click en un botón de acción no ejecuta nada
+#### Scenario: Click en Cancelar, Llamar o Finalizar no ejecuta nada
 
-- **WHEN** el usuario activa cualquier botón de la columna de acciones
+- **WHEN** el usuario activa Cancelar, Llamar o Finalizar en la columna de acciones
 - **THEN** el sistema no cambia el estado del turno ni realiza ninguna llamada al backend
 
 ### Requirement: Scroll infinito solo hacia adelante anclado al día actual
@@ -206,7 +211,7 @@ El sistema SHALL proveer, vía el script de seed del paquete de base de datos, u
 
 ### Requirement: Click en fila abre el detalle de turno
 
-El sistema SHALL abrir el popup de detalle al hacer click en una fila del modo Lista, para cualquier rol autenticado que pueda ver esa fila. El popup MUST ser el mismo de `appointments-form`, con título "Detalle de Turno" y carga abortable. El click en un botón de la columna Acciones MUST NOT abrir el popup ni ejecutar confirmar, anular, llamar o finalizar (esos botones siguen siendo stubs).
+El sistema SHALL abrir el popup de detalle al hacer click en una fila del modo Lista, para cualquier rol autenticado que pueda ver esa fila. El popup MUST ser el mismo de `appointments-form`, con título "Detalle de Turno" y carga abortable. El click en un botón de la columna Acciones MUST NOT abrir el popup. El click en Confirmar MUST ejecutar la confirmación de `appointments-confirm`. El click en Cancelar, Llamar o Finalizar MUST NOT cambiar el estado del turno.
 
 #### Scenario: Click en fila abre Detalle de Turno
 
@@ -216,4 +221,4 @@ El sistema SHALL abrir el popup de detalle al hacer click en una fila del modo L
 #### Scenario: Click en Acciones no abre el popup
 
 - **WHEN** el usuario activa un botón de la columna Acciones
-- **THEN** el sistema no abre el popup de turno y no cambia el estado del turno
+- **THEN** el sistema no abre el popup de turno

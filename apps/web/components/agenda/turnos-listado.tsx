@@ -24,6 +24,7 @@ type TurnosListadoProps = {
   rol: AuthRole;
   params: ParsedAgendaParams;
   onAbrirTurno: (turnoId: string) => void;
+  onConfirmado: () => void;
 };
 
 /**
@@ -62,13 +63,14 @@ type PageParam = {
  * Grilla de turnos con scroll infinito hacia adelante (modo Lista).
  * Leaf client: useInfiniteQuery anclado a hoy 00:00; no carga el pasado.
  *
- * @param props - Rol y params aplicados desde la URL.
+ * @param props - Rol, params de URL y callbacks de detalle/confirmación.
  * @returns Tabla de turnos con paginación por cursor.
  */
 export function TurnosListado({
   rol,
   params,
   onAbrirTurno,
+  onConfirmado,
 }: TurnosListadoProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const appliedFilters = useMemo(() => toAppliedFilters(params), [params]);
@@ -230,7 +232,13 @@ export function TurnosListado({
                   <TurnoTipoIcon tipo={turno.tipo} />
                 </td>
                 <td className="px-4 py-3" onClick={stopAccionesClick}>
-                  <TurnoAcciones rol={rol} />
+                  <TurnoAcciones
+                    rol={rol}
+                    estado={turno.estado}
+                    fecha={turno.fecha}
+                    turnoId={turno.id}
+                    onConfirmado={onConfirmado}
+                  />
                 </td>
               </tr>
             ))}

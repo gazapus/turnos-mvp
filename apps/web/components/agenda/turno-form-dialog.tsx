@@ -30,6 +30,7 @@ import { Controller, useForm } from 'react-hook-form';
 
 import { Combobox, useFeedback } from '@/components/ui';
 import { todayYmd } from '@/lib/agenda/fecha-dia';
+import { canConfirmarTurno } from '@/lib/agenda/can-confirmar-turno';
 import { addMinutesHm, digitsOnly } from '@/lib/agenda/hora';
 import { ApiError } from '@/lib/api/auth-client';
 import {
@@ -46,6 +47,7 @@ import {
   turnoFormSchema,
   type TurnoFormValues,
 } from '@/lib/schemas/turno-form-schema';
+import { useConfirmarTurno } from './use-confirmar-turno';
 
 const LOOKUP_DEBOUNCE_MS = 1500;
 const FRIENDLY_SAVE_ERROR = 'No se pudo guardar el turno';
@@ -214,6 +216,7 @@ export function TurnoFormDialog({
 }: TurnoFormDialogProps) {
   const queryClient = useQueryClient();
   const { toastSuccess, showError } = useFeedback();
+  const { confirmar, pending: confirming } = useConfirmarTurno();
   const canWrite = user.rol === 'ADMIN' || user.rol === 'RECEPCIONISTA';
   const isMedico = user.rol === 'MEDICO';
   const [pacienteLocked, setPacienteLocked] = useState(false);
@@ -297,6 +300,15 @@ export function TurnoFormDialog({
   const readOnly =
     isMedico || !canWrite || loadingDetalle || (isDetail && !fechaEditable);
   const showGuardar = canWrite && (!isDetail || fechaEditable);
+  const showConfirmar =
+    isDetail &&
+    loadedEstado !== null &&
+    loadedFecha !== null &&
+    canConfirmarTurno({
+      rol: user.rol,
+      estado: loadedEstado,
+      fecha: loadedFecha,
+    });
   const isValid = form.formState.isValid;
   const isDirty = form.formState.isDirty;
   const guardarEnabled =
@@ -516,6 +528,20 @@ export function TurnoFormDialog({
     }
   }
 
+  /**
+   * Confirma el turno del detalle y cierra el popup si sale bien.
+   */
+  async function handleConfirmar(): Promise<void> {
+    if (!turnoId) {
+      return;
+    }
+    const ok = await confirmar(turnoId);
+    if (ok) {
+      onSaved();
+      handleClose();
+    }
+  }
+
   if (!open || !mode) {
     return null;
   }
@@ -542,7 +568,7 @@ export function TurnoFormDialog({
             'linear-gradient(var(--glass-form-bg), var(--glass-form-bg)), url(/images/agenda/appointments-background.png)',
         }}
       >
-        {(loadingDetalle || saving) && (
+        {(loadingDetalle || saving || confirming) && (
           <div
             className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-background/70"
             data-testid="turno-form-overlay"
@@ -820,11 +846,13 @@ export function TurnoFormDialog({
             </div>
           </section>
 
-          {isDetail && canWrite ? (
+          {showConfirmar ? (
             <div className="mb-4 flex justify-center">
               <button
                 type="button"
-                className="inline-flex cursor-pointer items-center gap-2 rounded-md bg-primary px-10 py-3 text-sm font-semibold uppercase tracking-wide text-primary-foreground hover:bg-primary-hover"
+                disabled={confirming}
+                className="inline-flex cursor-pointer items-center gap-2 rounded-md bg-primary px-10 py-3 text-sm font-semibold uppercase tracking-wide text-primary-foreground hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
+                onClick={() => void handleConfirmar()}
               >
                 <Check className="size-4" aria-hidden />
                 Confirmar turno
