@@ -41,7 +41,8 @@ fi
 log "Installing workspace dependencies"
 pnpm install --frozen-lockfile
 
-log "Generating Prisma client and building @turnos/database"
+log "Building shared library packages (dist consumed by apps)"
+pnpm --filter @turnos/shared-types build
 pnpm --filter @turnos/database build
 
 log "Applying database migrations"
