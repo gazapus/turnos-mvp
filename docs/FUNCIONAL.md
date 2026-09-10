@@ -318,7 +318,50 @@ Tipos de turno: `PRIMER_TURNO`, `CONTROL`, `SOBRETURNO`, `URGENTE`.
 ## 13. Pendientes que no bloquean el modelado
 
 - Proveedor de integración de WhatsApp y su modelo de costos.
-- Detalle de implementación del chatbot (inyección de documentación en contexto vs. indexador ligero).
+
+---
+
+## 14. Anexo — Casos de uso incorporados por prioridad operativa
+
+La propuesta académica original (§10) define diez casos de uso, entre ellos **Dar de alta usuario** (CU 2) y **Bloquear agenda de médico** (CU 6). Durante la implementación del MVP surgió la necesidad de cerrar el circuito operativo diario antes de completar esos dos CU. Por **necesidad mayor operativa** se incorporaron y entregaron **antes** los dos casos de uso siguientes, que reemplazan temporalmente a CU 2 y CU 6 en la lista operativa del sistema entregado (ver [`README.md`](../README.md)).
+
+### Motivo de la priorización
+
+| Necesidad detectada | Impacto sin resolver |
+| :------------------ | :------------------- |
+| **Cerrar sesión** | Tras iniciar sesión, el usuario no podía salir del panel desde la UI; quedaba atrapado hasta que expirara la cookie JWT. |
+| **Reprogramar turno** | Un cambio de fecha u hora obligaba a cancelar el turno y cargar uno nuevo, duplicando trabajo y riesgo de error en recepción. |
+
+CU 2 (alta de usuario) no bloqueaba la demo del circuito: los usuarios de prueba se cargan por seed de base de datos. CU 6 (bloqueo de agenda) es relevante pero secundario frente a la operación diaria de sesión y modificación de turnos ya agendados. Ambos CU originales **siguen definidos en §10** y permanecen **pendientes de implementación**.
+
+### CU A — Cerrar sesión
+
+- **Actor:** cualquier usuario autenticado (Administrador, Recepcionista, Médico).
+- **Precondiciones:** sesión activa en el shell autenticado.
+- **Éxito:** el usuario activa el icono de perfil en la navbar → se abre un menú con la opción **Cerrar sesión** → el cliente llama `POST /api/auth/logout` → se elimina la cookie de sesión → redirección a `/login`.
+- **Extensiones:** si la petición falla, el sistema muestra un dialog de error, el usuario permanece autenticado en el panel y no se asume que la sesión terminó. No se pide confirmación previa.
+
+Relacionado con §5 (perfil de usuario: opción de cerrar sesión).
+
+### CU B — Reprogramar turno
+
+- **Actor:** Recepcionista o Administrador.
+- **Precondiciones:** turno existente en estado **Programado** cuya fecha civil es hoy o futura; recepcionista autenticado en la agenda.
+- **Éxito:** abre el detalle del turno en el popup de agenda → modifica fecha, hora u otros campos permitidos → **Guardar** → `PATCH /api/turnos/:id` → la agenda se actualiza con los nuevos datos.
+- **Restricciones:** turnos en estados distintos de Programado no admiten edición; turnos Programados con fecha pasada quedan en solo lectura. No es un flujo de cancelar + alta ni la reprogramación automática por bloqueo de agenda (§12 sigue fuera de alcance).
+
+Relacionado con §7.1 (creación/edición de turno) y el contrato de edición en `openspec/specs/appointments-form/spec.md`.
+
+### Relación con la lista original (§10)
+
+| CU original §10 | Estado |
+| :-------------- | :----- |
+| CU 2 — Dar de alta usuario | Pendiente (usuarios vía seed en MVP) |
+| CU 6 — Bloquear agenda de médico | Pendiente |
+| CU A — Cerrar sesión | Incorporado por prioridad operativa |
+| CU B — Reprogramar turno | Incorporado por prioridad operativa |
+
+La tabla de §10 no se modifica: conserva la propuesta académica original. Este anexo documenta la desviación justificada para la entrega del TP.
 
 ---
 

@@ -17,6 +17,7 @@ Para definiciones funcionales (roles, casos de uso, flujos operativos, reglas de
 | **AGENTS.md** (este archivo) | Cómo escribir código: estructura, patrones, estilo, testing |
 | **docs/FUNCIONAL.md**        | Qué debe hacer el sistema: requisitos y casos de uso        |
 | **openspec/**                | Contrato operativo vigente y cambios en curso (SDD)         |
+| **`.cursor/skills/`**        | Workflows de agente (OpenSpec, frontend, lib-docs, etc.)  |
 
 ---
 
@@ -499,24 +500,48 @@ describe('AppointmentsController', () => {
 | Vitest + RTL               | `apps/web`                        | `pnpm --filter @turnos/web test`                               |
 | Design tokens              | `apps/web/app/tokens.css`         | CSS + `@theme` Tailwind v4; import en `globals.css`            |
 | Jest                       | `apps/api`                        | `pnpm --filter @turnos/api test`                               |
-| Context7 (Cursor MCP)      | Plugin Cursor                     | Docs actualizadas de librerías; ver skill `lib-docs`           |
 | Skill `lib-docs`           | `.cursor/skills/lib-docs/`        | Auditoría de deprecaciones y APIs vía Context7 (`/lib-docs`)   |
+| Skills OpenSpec            | `.cursor/skills/openspec-*/`      | Ciclo SDD: explore, propose, apply, archive, sync              |
+| Skill `frontend-coder`     | `.cursor/skills/frontend-coder/`  | UI en `apps/web`: tokens, RHF+Zod, leaf components             |
+| Skill `react-doctor`       | `.cursor/skills/react-doctor/`    | Auditoría al cerrar cambios de UI                              |
 
 **Scripts raíz:** `pnpm lint`, `pnpm format`, `pnpm format:check`, `pnpm test`, `pnpm build`.
 
+### Skills de agente (Cursor)
+
+Leer la skill correspondiente **antes** de ejecutar el workflow indicado. No duplicar su contenido en prompts ad hoc.
+
+| Momento | Skill / comando |
+| :------ | :-------------- |
+| Explorar ideas o problemas antes de un change | `openspec-explore` — `/opsx-explore` |
+| Proponer un change con deltas y tareas | `openspec-propose` — `/opsx-propose` |
+| Implementar tareas de un change | `openspec-apply-change` — `/opsx-apply` |
+| Archivar change completado | `openspec-archive-change` — `/opsx-archive` |
+| Sincronizar specs sin archivar | `openspec-sync-specs` — `/opsx-sync` |
+| UI, páginas, componentes, estilos en `apps/web` | `frontend-coder` |
+| Cierre de feature con cambios de UI | `react-doctor` |
+| APIs de librerías de terceros o deprecaciones | `lib-docs` — `/lib-docs` (requiere Context7) |
+| Mockup de pantalla antes de codear UI nueva | MCP **Stitch**, luego `frontend-coder` |
+
 ### MCPs de desarrollo (Cursor)
 
-Los MCPs en este proyecto son **herramientas del IDE para agentes y desarrolladores**, no componentes del producto desplegable.
+Los MCPs son **herramientas del IDE para agentes y desarrolladores**; **no** son componentes del producto desplegable. Solo se utilizan estos dos servidores MCP en el flujo de este proyecto:
 
-| MCP / skill | Rol |
-| :---------- | :-- |
-| **Context7** | Documentación actualizada de librerías del stack (Next, Nest, Prisma, Tailwind, etc.). |
-| **Skill `lib-docs`** | Workflow del repo para consultar Context7, contrastar con el código y reportar deprecaciones. Comando: `/lib-docs`. |
-| **Browser** (Cursor) | Verificación manual de UI en `localhost`. |
+| MCP | Namespace | Rol |
+| :-- | :-------- | :-- |
+| **Context7** | `plugin-context7-plugin-context7` | Documentación actualizada de librerías del stack (Next.js, NestJS, Prisma, Tailwind, LangChain, etc.). Obligatorio vía skill `lib-docs` al tocar APIs de terceros. Si el MCP no está disponible o falla la auth, **detener** e informar; no inventar documentación. |
+| **Stitch** | `user-stitch` | Generación e iteración de mockups de pantallas a partir de descripciones. Usar **antes** de implementar UI nueva o al alinear layout. El código final MUST implementarse con `frontend-coder` y tokens de `apps/web/app/tokens.css`. |
 
-El chatbot del producto es solo asistente de documentación de usuario (`docs/ayuda/`); no usa Context7 ni MCP en runtime (ver `docs/FUNCIONAL.md` §9).
+Ambos se habilitan en Cursor (Settings → MCP). No requieren `.cursor/mcp.json` en el repositorio. **Prohibido** embeber Context7, Stitch ni cualquier MCP en `apps/web`, `apps/api` o el chatbot del producto.
 
-Context7 se habilita en Cursor (Settings → MCP / plugins). No requiere `.cursor/mcp.json` en el repo.
+### Chatbot del producto (runtime)
+
+Asistente de documentación de usuario (`docs/ayuda/`); ver `docs/FUNCIONAL.md` §9.
+
+- **Framework:** LangChain.js + LangGraph en `apps/api/src/chatbot/`.
+- **LLM:** Google **Gemini** (`GOOGLE_API_KEY`, `GEMINI_MODEL` en `apps/api/.env`).
+- **Prohibido:** colocar `GOOGLE_API_KEY` en `apps/web` o en variables expuestas al navegador.
+- **Prohibido:** usar Context7, Stitch ni MCP en el runtime del chatbot.
 
 ### Pendientes (changes posteriores)
 
