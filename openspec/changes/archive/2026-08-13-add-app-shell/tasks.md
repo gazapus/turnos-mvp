@@ -15,7 +15,7 @@
 
 ## 3. Componentes del shell
 
-- [x] 3.1 `AppBackground`: fondo fijo con `logo_background.webp` (+ overlay ligero si el diseño lo pide)
+- [x] 3.1 `AppBackground`: fondo fijo con `background1.webp` (+ overlay ligero si el diseño lo pide)
 - [x] 3.2 `AppSidebar`: glass del wireframe, logo completo/icono según estado, ítems filtrados por rol, activo por pathname, chevron colapsar/expandir
 - [x] 3.3 `AppNavbar`: logo icono (desktop), control ☰ (mobile), nombre de usuario + botón perfil (`console.log`)
 - [x] 3.4 `HelpBotButton`: FAB inferior derecho AYUDA BOT (`console.log`)

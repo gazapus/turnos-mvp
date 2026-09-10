@@ -1,6 +1,6 @@
 ## Context
 
-Tras `add-login-jwt`, existen stubs de paneles (`/usuarios`, `/agenda`, `/mi-agenda`) sin layout compartido. El wireframe de referencia es `wireframes/agendapage/` (glass, sidebar 280px, navbar, FAB AYUDA BOT). Assets: `logo_completo.png`, `logo_icono.png`, `images/general/logo_background.webp`. Sesión disponible vía `GET /api/auth/me` (`meRequest`). Ver proposal.md para motivación y matriz de menú por rol.
+Tras `add-login-jwt`, existen stubs de paneles (`/usuarios`, `/agenda`, `/mi-agenda`) sin layout compartido. El wireframe de referencia es `wireframes/agendapage/` (glass, sidebar 280px, navbar, FAB AYUDA BOT). Assets: `logo_completo.png`, `logo_icono.png`, `images/general/background1.webp`. Sesión disponible vía `GET /api/auth/me` (`meRequest`). Ver proposal.md para motivación y matriz de menú por rol.
 
 ## Goals / Non-Goals
 

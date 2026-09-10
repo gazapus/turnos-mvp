@@ -1,5 +1,5 @@
 /**
- * Fondo fijo del shell autenticado (`logo_background.webp`).
+ * Fondo fijo del shell autenticado (`background1.webp`).
  *
  * @returns Capa de fondo + overlay ligero para legibilidad.
  */
@@ -9,7 +9,7 @@ export function AppBackground() {
       <div
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
         style={{
-          backgroundImage: "url('/images/general/logo_background.webp')",
+          backgroundImage: "url('/images/general/background1.webp')",
         }}
       />
       <div className="absolute inset-0 bg-shell-bg-overlay" />
