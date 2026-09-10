@@ -11,6 +11,11 @@ export {
 } from './auth';
 
 export {
+  type ChatbotMensajeRequest,
+  type ChatbotMensajeResponse,
+} from './chatbot';
+
+export {
   type AsignarConsultorioRequest,
   type ConsultorioDto,
   type ConsultorioMedicoDto,

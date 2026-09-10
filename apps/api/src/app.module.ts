@@ -3,6 +3,7 @@ import { APP_FILTER } from '@nestjs/core';
 import { LoggerModule } from 'nestjs-pino';
 import { AppointmentsModule } from './appointments';
 import { AuthModule } from './auth';
+import { ChatbotModule } from './chatbot';
 import { ConsultoriosModule } from './consultorios';
 import { AllExceptionsFilter } from './common';
 import { EspecialidadesModule } from './especialidades';
@@ -30,6 +31,7 @@ import { WaitingRoomModule } from './waiting-room';
     AppointmentsModule,
     ConsultoriosModule,
     WaitingRoomModule,
+    ChatbotModule,
   ],
   providers: [
     {

@@ -9,7 +9,7 @@ import { SIDEBAR_COLLAPSED_STORAGE_KEY } from '@/lib/navigation';
 import { AppBackground } from './app-background';
 import { AppNavbar } from './app-navbar';
 import { AppSidebar } from './app-sidebar';
-import { HelpBotButton } from './help-bot-button';
+import { HelpChat } from './help-chat';
 import { FeedbackProvider } from '@/components/ui';
 
 type AppShellProps = {
@@ -78,10 +78,12 @@ export function AppShell({ user, children }: AppShellProps) {
         ].join(' ')}
       >
         <AppNavbar user={user} onOpenMobileNav={() => setMobileOpen(true)} />
-        <div className="relative z-20 flex-1 overflow-y-auto p-6 max-md:p-3">
-          <FeedbackProvider>{children}</FeedbackProvider>
-        </div>
-        <HelpBotButton />
+        <FeedbackProvider>
+          <div className="relative z-20 flex-1 overflow-y-auto p-6 max-md:p-3">
+            {children}
+          </div>
+          <HelpChat />
+        </FeedbackProvider>
       </div>
     </div>
   );
