@@ -25,7 +25,7 @@ Esta decisión no reemplaza el stack tecnológico ni la organización monorepo y
 | Flexibilidad                | Artefactos opcionales (p. ej. `design.md` se puede omitir cuando no aporta); no impone una constitución rígida ni fases obligatorias en orden estricto. |
 | Fuente de verdad unificada  | `openspec/specs/` consolida el estado actual del sistema por dominio; cada cambio es un delta explícito (ADDED / MODIFIED / REMOVED).                   |
 | Velocidad con agentes de IA | Menos fricción entre “especificar” e “implementar”; el agente trabaja contra un contrato claro y un checklist de tareas derivado del delta.             |
-| Ajuste a monorepo + SDD     | Una sola carpeta `openspec/` en la raíz del repo sirve a `apps/web`, `apps/api` y `apps/mcp-postgres` sin fragmentar la especificación por aplicación.  |
+| Ajuste a monorepo + SDD     | Una sola carpeta `openspec/` en la raíz del repo sirve a `apps/web` y `apps/api` sin fragmentar la especificación por aplicación.                       |
 | Evolución incremental       | Ideal para incorporar los CU del MVP de a uno (auth, turnos, sala de espera, chatbot) sin reescribir specs completas en cada ciclo.                     |
 
 ---
@@ -49,8 +49,7 @@ OpenSpec vive en la **raíz del monorepo**, al mismo nivel que `apps/`, `package
 turnos-mvp/
 ├── apps/
 │   ├── web/                      # Next.js (App Router) — Frontend
-│   ├── api/                      # NestJS — Backend
-│   └── mcp-postgres/             # servidor MCP solo-lectura (chatbot)
+│   └── api/                      # NestJS — Backend
 │
 ├── packages/
 │   ├── database/                 # Prisma: fuente única de tipos y migraciones
@@ -113,7 +112,7 @@ Se eligió SDD con OpenSpec por las siguientes razones:
    La velocidad es un factor crítico del MVP académico. El ciclo Propose / Apply / Archive reduce el overhead ceremonial: se propone el delta, se implementa y se archiva contra `openspec/specs/`, sin atravesar fases obligatorias que no aportan valor en cambios acotados (p. ej. un ajuste de estado de turno o de política de alcance del chatbot).
 
 3. **Alineación con el monorepo y el trabajo asistido por agentes**  
-   Una sola carpeta `openspec/` en la raíz da a los agentes un contrato transversal a web, API y MCP. Eso refuerza el SDD con mayor control ya argumentado en el ADR 01: el agente ve especificación y código en el mismo workspace.
+   Una sola carpeta `openspec/` en la raíz da a los agentes un contrato transversal a web y API. Eso refuerza el SDD con mayor control ya argumentado en el ADR 01: el agente ve especificación y código en el mismo workspace. Context7 y la skill `lib-docs` (ADR 05) complementan OpenSpec con documentación actualizada de librerías; no forman parte de `openspec/`.
 
 4. **Evolución incremental de los 10 CU**  
    Los casos de uso del MVP se pueden incorporar como changes sucesivos (auth, alta de usuarios, agenda, sala de espera, chatbot) sin redefinir el sistema completo en cada iteración. Al archivar, la fuente de verdad crece de forma ordenada y auditable.

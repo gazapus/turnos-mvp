@@ -193,36 +193,19 @@ Disponible para todos los usuarios autenticados. Muestra:
 
 ---
 
-## 9. Chatbot de ayuda y consulta de datos
+## 9. Chatbot de ayuda
 
-Disponible para todos los usuarios autenticados. Cumple dos funciones:
+Disponible para todos los usuarios autenticados. Función única: **asistente de documentación** sobre el uso del sistema.
 
 ### 9.1 Asistente de documentación
 
 - Responde consultas sobre el uso del sistema (ej. “cómo bloqueo la agenda”, “cómo creo un sobreturno”).
-- Basado en IA con base de conocimiento de la documentación de la aplicación.
+- Basado en IA con base de conocimiento de la documentación de la aplicación (`docs/ayuda/`).
+- **No consulta la base de datos** ni ejecuta acciones operativas (confirmar turno, llamar paciente, etc.).
 
-### 9.2 Consultas a datos en lenguaje natural
+### 9.2 Restricción de dominio
 
-- Ejemplos: “¿qué turnos tengo hoy?”, “¿cuántos pacientes atendió el Dr. Pérez esta semana?”.
-- Se resuelve vía **servidor MCP de PostgreSQL** conectado a la base del sistema.
-- **Solo lectura:** no puede crear, modificar ni eliminar datos.
-
-### 9.3 Alcance de datos por rol
-
-Todo prompt de consulta de datos debe incluir el **rol autenticado** y las reglas de límite correspondientes:
-
-| Rol           | Alcance permitido                                       |
-| ------------- | ------------------------------------------------------- |
-| Médico        | Solo sus turnos y los pacientes asociados a esos turnos |
-| Recepcionista | Cualquier paciente, médico y turno del sistema          |
-| Administrador | Todos los datos, sin restricción                        |
-
-La restricción se aplica en el prompt de sistema (no solo por voluntad del usuario ni por filtro posterior).
-
-### 9.4 Restricción de dominio
-
-El chatbot **no responde** consultas ajenas a la aplicación (ni documentación de uso ni datos del sistema).
+El chatbot **no responde** consultas ajenas a la documentación de uso de la aplicación (clima, temas generales, datos operativos del día a día).
 
 ---
 
@@ -327,13 +310,15 @@ Tipos de turno: `PRIMER_TURNO`, `CONTROL`, `SOBRETURNO`, `URGENTE`.
 - Múltiples pantallas de sala de espera simultáneas.
 - Reprogramación automática de turnos afectados por bloqueo de agenda.
 - Rotación de un médico entre múltiples consultorios.
+- Consultas a datos en lenguaje natural vía chatbot (ej. “¿qué turnos tengo hoy?”).
+- Acciones operativas vía chatbot (confirmar turnos, llamar pacientes, etc.).
 
 ---
 
 ## 13. Pendientes que no bloquean el modelado
 
 - Proveedor de integración de WhatsApp y su modelo de costos.
-- Detalle de implementación del chatbot (inyección de documentación en contexto vs. indexador ligero) y políticas MCP de alcance por rol.
+- Detalle de implementación del chatbot (inyección de documentación en contexto vs. indexador ligero).
 
 ---
 

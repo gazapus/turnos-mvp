@@ -493,4 +493,4 @@ graph TD
 1. Bootstrap de specs OpenSpec a partir de los CU1–CU10 (`openspec/specs/` por dominio).
 2. Implementar módulo de autenticación (CU1) en `apps/api` + pantalla login en `apps/web`.
 3. Poblar datos semilla: administrador inicial en base de datos.
-4. Crear `apps/mcp-postgres` cuando se implemente el chatbot con consultas de datos.
+4. Habilitar Context7 en Cursor y la skill `lib-docs`; ver ADR 05.

@@ -88,7 +88,7 @@ Se evaluó conservar `@turnos/ui` como paquete workspace para tokens y futuros p
 | :---------------------------------- | :-------------------------------------------------------------------------------------- |
 | Frontera clara DS / app             | Con un solo consumidor, la frontera es documental, no técnica.                          |
 | Preparación para primitives         | Introduce `peerDependencies`, tests y build de librería antes de tener primitives.      |
-| Consistencia con otros `packages/*` | `database` y `shared-types` tienen **múltiples consumidores** (api, web, mcp); `ui` no. |
+| Consistencia con otros `packages/*` | `database` y `shared-types` tienen **múltiples consumidores** (api, web); `ui` no. |
 
 Si el proyecto incorpora una segunda app frontend o un catálogo estable de primitives con documentación propia (Storybook), se puede **reintroducir** un package de UI en un change dedicado, extrayendo `tokens.css` y los primitives ya existentes en `apps/web`.
 

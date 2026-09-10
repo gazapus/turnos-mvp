@@ -3,7 +3,7 @@
 **Fecha:** Agosto 2026  
 **Estado:** Decisión tomada  
 **Alcance:** Organización del código y estructura del repositorio  
-**Stack base (fuera de esta decisión):** Next.js + NestJS + PostgreSQL/Prisma + LangChain.js + MCP
+**Stack base (fuera de esta decisión):** Next.js + NestJS + PostgreSQL/Prisma + LangChain.js + Context7 (Cursor, proceso de desarrollo)
 
 ---
 
@@ -22,9 +22,9 @@ Esta decisión cubre únicamente la organización del código. El stack tecnoló
 | Tipado end-to-end           | Prisma genera tipos desde un schema único; NestJS y Next.js los consumen sin duplicar DTOs ni sincronizar contratos a mano.                  |
 | Cambios atómicos            | Un ajuste al modelo de Turno (schema + API + UI) se resuelve en un solo commit/PR, evitando drift entre apps.                                |
 | Contexto para agentes de IA | Schema, endpoints, DTOs y componentes viven en el mismo workspace; favorece el desarrollo Spec-Driven documentado en la propuesta.           |
+| Docs de librerías al día    | Context7 (Cursor) + skill `lib-docs` consultan documentación actualizada del stack sin embeber MCP en el runtime del producto.                |
 | Tooling unificado           | ESLint, TypeScript, Prisma y CI se configuran una sola vez y se reutilizan por paquete.                                                      |
 | Contratos en tiempo real    | El flujo CU9/CU10 (llamado de turno → WebSocket → pantalla de sala de espera) evoluciona junto en front y back.                              |
-| MCP alineado al schema      | El servidor MCP de PostgreSQL (solo lectura) comparte el mismo modelo/tipos que la API, reduciendo inconsistencias en consultas del chatbot. |
 
 ---
 
@@ -61,13 +61,9 @@ turnos-mvp/
 │   │       ├── appointments/     # turnos
 │   │       ├── schedule-blocks/  # bloqueo de agenda
 │   │       ├── waiting-room/     # gateway WebSocket (CU9/CU10)
-│   │       ├── chatbot/          # módulo LangChain.js
+│   │       ├── chatbot/          # módulo LangChain.js (solo documentación)
 │   │       └── notifications/    # jobs de mail
 │   │
-│   └── mcp-postgres/             # servidor MCP solo-lectura (chatbot)
-│       ├── src/
-│       └── policies/             # reglas de alcance por rol
-│
 ├── packages/
 │   ├── database/                 # Prisma: fuente única de tipos y migraciones
 │   │   └── prisma/schema.prisma
@@ -88,7 +84,7 @@ turnos-mvp/
 
 ### Roles de cada capa
 
-- **`apps/`** — unidades desplegables (web, API, MCP).
+- **`apps/`** — unidades desplegables (web, API).
 - **`packages/database`** — única fuente de verdad del modelo de datos (Prisma).
 - **`packages/shared-types`** — contratos tipados entre frontend y backend.
 - **`docs/`** — especificación funcional y decisiones de arquitectura.
@@ -100,7 +96,7 @@ turnos-mvp/
 Se eligió monorepo por las siguientes razones, alineadas al contexto real del MVP:
 
 1. **Equipo de 1 persona**  
-   Mantener 3–4 repositorios (web, api, mcp), cada uno con su CI, lint y versionado, añade overhead innecesario para un único desarrollador con plazo académico. Un solo checkout y un solo pipeline reducen fricción operativa.
+   Mantener múltiples repositorios (web, api), cada uno con su CI, lint y versionado, añade overhead innecesario para un único desarrollador con plazo académico. Un solo checkout y un solo pipeline reducen fricción operativa.
 
 2. **Compartir tipos para acelerar el desarrollo**  
    La propuesta exige tipado estático end-to-end con Prisma. En monorepo, el schema genera tipos consumibles de inmediato por NestJS y Next.js. Eso evita duplicar DTOs, regenerar clientes OpenAPI a mano o publicar paquetes intermedios solo para sincronizar contratos.
@@ -108,16 +104,16 @@ Se eligió monorepo por las siguientes razones, alineadas al contexto real del M
 3. **Spec-Driven Development (SDD) con mayor control**  
    Los 10 casos de uso del MVP operan como contrato inalterable para agentes de IA. Con todo el código en un mismo workspace, los agentes ven schema, endpoints, DTOs y UI juntos, lo que reduce alucinaciones y permite aplicar cambios consistentes de extremo a extremo bajo la especificación.
 
-4. **Contratos de tiempo real y MCP sin drift**  
-   El llamado de turno (CU9) y la pantalla de sala de espera (CU10) dependen de un contrato WebSocket compartido entre front y back. Además, el MCP de PostgreSQL (solo lectura, con alcance por rol) debe alinearse al mismo schema que la API. El monorepo mantiene ambos contratos en el mismo ciclo de cambio, sin PRs coordinados entre repos.
+4. **Contratos en tiempo real sin drift**  
+   El llamado de turno (CU9) y la pantalla de sala de espera (CU10) dependen de un contrato WebSocket compartido entre front y back. El monorepo mantiene ese contrato en el mismo ciclo de cambio que la API y la UI, sin PRs coordinados entre repos.
 
 ---
 
 ## 6. Alternativa descartada (resumen)
 
-Se evaluó también un **polyrepo** (un repo por app: `turnos-web`, `turnos-api`, `turnos-mcp-postgres`). Ofrece independencia de despliegue y ownership claro por repo, pero implica sincronizar tipos entre repositorios, coordinar PRs multi-repo y fragmentar el contexto de los agentes de IA. Esa independencia no aporta valor suficiente en un MVP single-tenant desarrollado por una sola persona.
+Se evaluó también un **polyrepo** (un repo por app: `turnos-web`, `turnos-api`). Ofrece independencia de despliegue y ownership claro por repo, pero implica sincronizar tipos entre repositorios, coordinar PRs multi-repo y fragmentar el contexto de los agentes de IA. Esa independencia no aporta valor suficiente en un MVP single-tenant desarrollado por una sola persona.
 
-Si el proyecto evoluciona post-MVP hacia multi-tenant o a un equipo con ownership separado por app, se podrá extraer `apps/api` o `apps/mcp-postgres` a un repositorio propio sin rediseñar el sistema completo.
+Si el proyecto evoluciona post-MVP hacia multi-tenant o a un equipo con ownership separado por app, se podrá extraer `apps/api` a un repositorio propio sin rediseñar el sistema completo.
 
 ---
 
@@ -126,4 +122,4 @@ Si el proyecto evoluciona post-MVP hacia multi-tenant o a un equipo con ownershi
 1. Inicializar el monorepo (`pnpm-workspace.yaml`, `turbo.json`, estructura `apps/` + `packages/`).
 2. Definir el schema Prisma en `packages/database` a partir del modelado de datos.
 3. Levantar `apps/api` (NestJS) y `apps/web` (Next.js) consumiendo los paquetes compartidos.
-4. Incorporar `apps/mcp-postgres` cuando se implemente el chatbot con consultas de datos.
+4. Habilitar Context7 en Cursor y la skill `lib-docs`; ver ADR 05.

@@ -26,6 +26,7 @@ Skill de proyecto para implementar UI en `apps/web`.
 | [`docs/FUNCIONAL.md`](../../docs/FUNCIONAL.md) | Requisitos de negocio, roles, casos de uso |
 | [`.cursor/skills/frontend-coder/references/tokens.md`](references/tokens.md) | Catálogo semántico de tokens |
 | Skill `react-doctor` | Auditoría al cerrar cambios de UI |
+| Skill `lib-docs` | Deprecaciones y docs oficiales vía Context7 (`/lib-docs`) |
 
 Si esta skill y `AGENTS.md` divergen, **gana `AGENTS.md`**. OpenSpec **no es requerido** para estilos ni tokens.
 
@@ -39,7 +40,7 @@ Si esta skill y `AGENTS.md` divergen, **gana `AGENTS.md`**. OpenSpec **no es req
 6. **JSDoc** — obligatorio en componentes y funciones exportadas.
 7. **Tests** — `*.test.tsx` junto al componente (Vitest + RTL); uno por componente nuevo.
 8. **Desktop-first** — estilos base para ≥1024px; adaptar con `max-lg:`, `max-md:`, `max-sm:`.
-9. **Cierre** — correr `pnpm --filter @turnos/web test` y skill `react-doctor` si hubo cambios de UI.
+9. **Cierre** — si se usaron APIs nuevas de Next.js, Tailwind, RHF, Zod o TanStack Query, correr skill `lib-docs` (focused) vía Context7; luego `pnpm --filter @turnos/web test` y skill `react-doctor` si hubo cambios de UI.
 
 ## Estilos (tokens CSS + `@theme`)
 

@@ -52,10 +52,6 @@ turnos-mvp/
 │   │       ├── chatbot/          # módulo LangChain.js
 │   │       └── notifications/    # jobs de mail
 │   │
-│   └── mcp-postgres/             # servidor MCP solo-lectura (chatbot)
-│       ├── src/
-│       └── policies/             # reglas de alcance por rol
-│
 ├── packages/
 │   ├── database/                 # Prisma: fuente única de tipos y migraciones
 │   │   └── prisma/schema.prisma
@@ -88,7 +84,7 @@ turnos-mvp/
 
 | Capa                        | Rol                                                          |
 | :-------------------------- | :----------------------------------------------------------- |
-| **`apps/`**                 | Unidades desplegables (web, API, MCP).                       |
+| **`apps/`**                 | Unidades desplegables (web, API).                            |
 | **`packages/database`**     | Única fuente de verdad del modelo de datos (Prisma).         |
 | **`packages/shared-types`** | Contratos tipados compartidos entre frontend y backend.      |
 | **`packages/config`**       | Configuraciones base compartidas (ESLint, TypeScript, etc.). |
@@ -503,8 +499,24 @@ describe('AppointmentsController', () => {
 | Vitest + RTL               | `apps/web`                        | `pnpm --filter @turnos/web test`                               |
 | Design tokens              | `apps/web/app/tokens.css`         | CSS + `@theme` Tailwind v4; import en `globals.css`            |
 | Jest                       | `apps/api`                        | `pnpm --filter @turnos/api test`                               |
+| Context7 (Cursor MCP)      | Plugin Cursor                     | Docs actualizadas de librerías; ver skill `lib-docs`           |
+| Skill `lib-docs`           | `.cursor/skills/lib-docs/`        | Auditoría de deprecaciones y APIs vía Context7 (`/lib-docs`)   |
 
 **Scripts raíz:** `pnpm lint`, `pnpm format`, `pnpm format:check`, `pnpm test`, `pnpm build`.
+
+### MCPs de desarrollo (Cursor)
+
+Los MCPs en este proyecto son **herramientas del IDE para agentes y desarrolladores**, no componentes del producto desplegable.
+
+| MCP / skill | Rol |
+| :---------- | :-- |
+| **Context7** | Documentación actualizada de librerías del stack (Next, Nest, Prisma, Tailwind, etc.). |
+| **Skill `lib-docs`** | Workflow del repo para consultar Context7, contrastar con el código y reportar deprecaciones. Comando: `/lib-docs`. |
+| **Browser** (Cursor) | Verificación manual de UI en `localhost`. |
+
+El chatbot del producto es solo asistente de documentación de usuario (`docs/ayuda/`); no usa Context7 ni MCP en runtime (ver `docs/FUNCIONAL.md` §9).
+
+Context7 se habilita en Cursor (Settings → MCP / plugins). No requiere `.cursor/mcp.json` en el repo.
 
 ### Pendientes (changes posteriores)
 

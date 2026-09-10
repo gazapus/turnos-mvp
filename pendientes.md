@@ -19,5 +19,7 @@
 - buscar proximo turno 
 - Condicionar campos especialiidad y medico en form turno.
 - Advertencia de sobreturno al crear turno sobre otro turno.
+- Rediseño de popups y toasts
+- establecer ws o sse en todos los turnos para ver nuevos turnos y cambios de estado
 --- 
 rate limit
