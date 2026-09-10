@@ -14,6 +14,8 @@ out/
 .env.*.local
 !.env.example
 notas.md
+pendientes.md
+wireframes/
 
 # IDE / OS
 .idea/
