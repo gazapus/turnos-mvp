@@ -72,13 +72,13 @@ export function AppShell({ user, children }: AppShellProps) {
 
       <div
         className={[
-          'relative z-20 flex min-w-0 flex-1 flex-col overflow-hidden transition-[margin] duration-300 ease-in-out',
+          'relative z-20 flex min-w-0 flex-1 flex-col overflow-visible transition-[margin] duration-300 ease-in-out',
           collapsed ? 'ml-sidebar-collapsed' : 'ml-sidebar',
           'max-md:ml-0',
         ].join(' ')}
       >
-        <AppNavbar user={user} onOpenMobileNav={() => setMobileOpen(true)} />
         <FeedbackProvider>
+          <AppNavbar user={user} onOpenMobileNav={() => setMobileOpen(true)} />
           <div className="relative z-20 flex-1 overflow-y-auto p-6 max-md:p-3">
             {children}
           </div>
