@@ -78,6 +78,8 @@ export type TurnoListItemDto = {
   especialidad: EspecialidadNombreDto;
   estado: EstadoTurno;
   tipo: TipoTurno;
+  /** True si existe al menos un llamado a sala de espera. */
+  llamado: boolean;
 };
 
 /**
@@ -148,6 +150,8 @@ export type TurnoDetalleDto = {
   estado: EstadoTurno;
   notificarMail: boolean;
   motivoCancelacion: string | null;
+  /** True si existe al menos un llamado a sala de espera. */
+  llamado: boolean;
 };
 
 /**

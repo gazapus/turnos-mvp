@@ -132,6 +132,7 @@ const programado: TurnoListItemDto = {
   especialidad: { nombre: 'Cardiología' },
   estado: 'PROGRAMADO',
   tipo: 'PRIMER_TURNO',
+  llamado: false,
 };
 
 describe('toCalendarEvent', () => {

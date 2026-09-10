@@ -17,6 +17,11 @@ export {
 } from './consultorios';
 
 export {
+  type LlamadoSalaEsperaDto,
+  type SalaEsperaSnapshot,
+} from './sala-espera';
+
+export {
   DIRECCION_PAGINACION,
   ESTADO_TURNO,
   TIPO_TURNO,

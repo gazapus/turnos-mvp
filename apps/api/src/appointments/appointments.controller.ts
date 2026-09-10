@@ -151,6 +151,54 @@ export class AppointmentsController {
   }
 
   /**
+   * Llama al paciente a sala de espera.
+   *
+   * @param id - UUID del turno.
+   * @param req - Request autenticada.
+   * @returns Detalle con llamado registrado.
+   */
+  @Post(':id/llamar')
+  @UseGuards(JwtAuthGuard)
+  @ApiCookieAuth(AUTH_COOKIE_NAME)
+  @ApiOperation({ summary: 'Llamar turno a sala de espera' })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiResponse({ status: 200, type: TurnoDetalleResponseDto })
+  @ApiResponse({ status: 400, description: 'Estado, día o consultorio inválidos' })
+  @ApiResponse({ status: 401, description: 'No autorizado' })
+  @ApiResponse({ status: 403, description: 'Sin permiso' })
+  @ApiResponse({ status: 404, description: 'Turno no encontrado' })
+  llamar(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() req: AuthenticatedRequest,
+  ): Promise<TurnoDetalleResponseDto> {
+    return this.appointmentsService.llamarTurno(id, this.requireUser(req));
+  }
+
+  /**
+   * Marca un turno llamado como atendido.
+   *
+   * @param id - UUID del turno.
+   * @param req - Request autenticada.
+   * @returns Detalle finalizado.
+   */
+  @Patch(':id/finalizar')
+  @UseGuards(JwtAuthGuard)
+  @ApiCookieAuth(AUTH_COOKIE_NAME)
+  @ApiOperation({ summary: 'Finalizar turno' })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiResponse({ status: 200, type: TurnoDetalleResponseDto })
+  @ApiResponse({ status: 400, description: 'Estado, día o llamado inválidos' })
+  @ApiResponse({ status: 401, description: 'No autorizado' })
+  @ApiResponse({ status: 403, description: 'Sin permiso' })
+  @ApiResponse({ status: 404, description: 'Turno no encontrado' })
+  finalizar(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() req: AuthenticatedRequest,
+  ): Promise<TurnoDetalleResponseDto> {
+    return this.appointmentsService.finalizarTurno(id, this.requireUser(req));
+  }
+
+  /**
    * Cancela un turno PROGRAMADO o CONFIRMADO.
    *
    * @param id - UUID del turno.

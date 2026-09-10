@@ -9,6 +9,7 @@ import { EspecialidadesModule } from './especialidades';
 import { HealthModule } from './health';
 import { PacientesModule } from './pacientes';
 import { UsersModule } from './users';
+import { WaitingRoomModule } from './waiting-room';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { UsersModule } from './users';
     PacientesModule,
     AppointmentsModule,
     ConsultoriosModule,
+    WaitingRoomModule,
   ],
   providers: [
     {

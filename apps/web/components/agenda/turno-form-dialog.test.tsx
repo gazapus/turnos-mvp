@@ -16,6 +16,8 @@ import {
   fetchTurnoById,
   confirmarTurno,
   cancelarTurno,
+  llamarTurno,
+  finalizarTurno,
 } from '@/lib/api/turnos-client';
 import { TurnoFormDialog, type TurnoFormMode } from './turno-form-dialog';
 
@@ -29,6 +31,8 @@ vi.mock('@/lib/api/turnos-client', () => ({
   updateTurno: vi.fn(),
   confirmarTurno: vi.fn(),
   cancelarTurno: vi.fn(),
+  llamarTurno: vi.fn(),
+  finalizarTurno: vi.fn(),
 }));
 
 const mockFetchMedicos = vi.mocked(fetchMedicos);
@@ -38,6 +42,8 @@ const mockFetchTurnoById = vi.mocked(fetchTurnoById);
 const mockFetchPrimeraVez = vi.mocked(fetchPrimeraVez);
 const mockConfirmarTurno = vi.mocked(confirmarTurno);
 const mockCancelarTurno = vi.mocked(cancelarTurno);
+const mockLlamarTurno = vi.mocked(llamarTurno);
+const mockFinalizarTurno = vi.mocked(finalizarTurno);
 
 const recepcionista: AuthUser = {
   id: 'r1',
@@ -76,6 +82,7 @@ const detalle: TurnoDetalleDto = {
   estado: 'PROGRAMADO',
   notificarMail: false,
   motivoCancelacion: null,
+  llamado: false,
 };
 
 /**
@@ -236,7 +243,7 @@ describe('TurnoFormDialog', () => {
     expect(screen.getByLabelText(/^nombre$/i)).not.toHaveAttribute('readOnly');
   });
 
-  it('en detalle el médico solo ve Llamar paciente y Salir', async () => {
+  it('en detalle el médico sin confirmado solo ve Salir', async () => {
     renderDialog(
       <TurnoFormDialog
         open
@@ -250,19 +257,59 @@ describe('TurnoFormDialog', () => {
     expect(
       await screen.findByRole('heading', { name: /detalle de turno/i }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: /llamar paciente/i }),
-    ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /salir/i })).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /llamar paciente/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /finalizar turno/i }),
+    ).not.toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: /guardar/i }),
     ).not.toBeInTheDocument();
+  });
+
+  it('médico ve Llamar en confirmado de hoy y Finalizar tras llamado', async () => {
+    mockFetchTurnoById.mockResolvedValue({
+      ...detalle,
+      estado: 'CONFIRMADO',
+      llamado: false,
+    });
+    renderDialog(
+      <TurnoFormDialog
+        open
+        mode={{ kind: 'detail', turnoId: 't1' }}
+        user={medico}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    );
+
     expect(
-      screen.queryByRole('button', { name: /confirmar turno/i }),
-    ).not.toBeInTheDocument();
+      await screen.findByRole('button', { name: /llamar paciente/i }),
+    ).toBeInTheDocument();
     expect(
-      screen.queryByRole('button', { name: /cancelar turno/i }),
+      screen.queryByRole('button', { name: /finalizar turno/i }),
     ).not.toBeInTheDocument();
+
+    cleanup();
+    mockFetchTurnoById.mockResolvedValue({
+      ...detalle,
+      estado: 'CONFIRMADO',
+      llamado: true,
+    });
+    renderDialog(
+      <TurnoFormDialog
+        open
+        mode={{ kind: 'detail', turnoId: 't1' }}
+        user={medico}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    );
+    expect(
+      await screen.findByRole('button', { name: /finalizar turno/i }),
+    ).toBeInTheDocument();
   });
 
   it('usa switch de notificar como checkbox sin subtexto', async () => {
@@ -694,6 +741,134 @@ describe('TurnoFormDialog', () => {
     await screen.findByRole('heading', { name: /detalle de turno/i });
     expect(
       screen.queryByText(/motivo de cancelación/i),
+    ).not.toBeInTheDocument();
+  });
+
+  it('llamar deja el popup abierto y muestra Finalizar', async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    const onSaved = vi.fn();
+    mockFetchTurnoById.mockResolvedValue({
+      ...detalle,
+      estado: 'CONFIRMADO',
+      llamado: false,
+    });
+    mockLlamarTurno.mockResolvedValue({
+      ...detalle,
+      estado: 'CONFIRMADO',
+      llamado: true,
+    });
+
+    renderDialog(
+      <TurnoFormDialog
+        open
+        mode={{ kind: 'detail', turnoId: 't1' }}
+        user={medico}
+        onClose={onClose}
+        onSaved={onSaved}
+      />,
+    );
+
+    await user.click(
+      await screen.findByRole('button', { name: /llamar paciente/i }),
+    );
+    expect(mockLlamarTurno).toHaveBeenCalledWith('t1');
+    expect(onSaved).toHaveBeenCalledTimes(1);
+    expect(onClose).not.toHaveBeenCalled();
+    expect(
+      await screen.findByText(/paciente llamado correctamente/i),
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByRole('button', { name: /finalizar turno/i }),
+    ).toBeInTheDocument();
+  });
+
+  it('finalizar cierra el popup', async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    const onSaved = vi.fn();
+    mockFetchTurnoById.mockResolvedValue({
+      ...detalle,
+      estado: 'CONFIRMADO',
+      llamado: true,
+    });
+    mockFinalizarTurno.mockResolvedValue({
+      ...detalle,
+      estado: 'ATENDIDO',
+      llamado: true,
+    });
+
+    renderDialog(
+      <TurnoFormDialog
+        open
+        mode={{ kind: 'detail', turnoId: 't1' }}
+        user={medico}
+        onClose={onClose}
+        onSaved={onSaved}
+      />,
+    );
+
+    await user.click(
+      await screen.findByRole('button', { name: /finalizar turno/i }),
+    );
+    expect(mockFinalizarTurno).toHaveBeenCalledWith('t1');
+    expect(onSaved).toHaveBeenCalledTimes(1);
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('error al llamar no cierra el popup', async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    mockFetchTurnoById.mockResolvedValue({
+      ...detalle,
+      estado: 'CONFIRMADO',
+      llamado: false,
+    });
+    mockLlamarTurno.mockRejectedValue(
+      new ApiError({
+        statusCode: 400,
+        message: 'El médico no tiene consultorio asignado',
+        error: 'Bad Request',
+        path: '/api/turnos/t1/llamar',
+        timestamp: new Date().toISOString(),
+      }),
+    );
+
+    renderDialog(
+      <TurnoFormDialog
+        open
+        mode={{ kind: 'detail', turnoId: 't1' }}
+        user={medico}
+        onClose={onClose}
+        onSaved={vi.fn()}
+      />,
+    );
+
+    await user.click(
+      await screen.findByRole('button', { name: /llamar paciente/i }),
+    );
+    expect(
+      await screen.findByText(/no se pudo llamar al paciente/i),
+    ).toBeInTheDocument();
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+  });
+
+  it('alta y recepción no muestran Llamar ni Finalizar', async () => {
+    renderDialog(
+      <TurnoFormDialog
+        open
+        mode={{ kind: 'create' }}
+        user={recepcionista}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    );
+    expect(
+      screen.queryByRole('button', { name: /llamar paciente/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /finalizar turno/i }),
     ).not.toBeInTheDocument();
   });
 });

@@ -32,6 +32,8 @@ import { Combobox, useFeedback } from '@/components/ui';
 import { todayYmd } from '@/lib/agenda/fecha-dia';
 import { canCancelarTurno } from '@/lib/agenda/can-cancelar-turno';
 import { canConfirmarTurno } from '@/lib/agenda/can-confirmar-turno';
+import { canFinalizarTurno } from '@/lib/agenda/can-finalizar-turno';
+import { canLlamarTurno } from '@/lib/agenda/can-llamar-turno';
 import { addMinutesHm, digitsOnly } from '@/lib/agenda/hora';
 import { ApiError } from '@/lib/api/auth-client';
 import {
@@ -50,6 +52,8 @@ import {
 } from '@/lib/schemas/turno-form-schema';
 import { useCancelarTurno } from './use-cancelar-turno';
 import { useConfirmarTurno } from './use-confirmar-turno';
+import { useFinalizarTurno } from './use-finalizar-turno';
+import { useLlamarTurno } from './use-llamar-turno';
 
 const LOOKUP_DEBOUNCE_MS = 1500;
 const FRIENDLY_SAVE_ERROR = 'No se pudo guardar el turno';
@@ -221,6 +225,8 @@ export function TurnoFormDialog({
   const { toastSuccess, showError } = useFeedback();
   const { confirmar, pending: confirming } = useConfirmarTurno();
   const { cancelar, pending: canceling } = useCancelarTurno();
+  const { llamar, pending: calling } = useLlamarTurno();
+  const { finalizar, pending: finishing } = useFinalizarTurno();
   const canWrite = user.rol === 'ADMIN' || user.rol === 'RECEPCIONISTA';
   const isMedico = user.rol === 'MEDICO';
   const [pacienteLocked, setPacienteLocked] = useState(false);
@@ -231,6 +237,7 @@ export function TurnoFormDialog({
   >(null);
   const [loadedFecha, setLoadedFecha] = useState<string | null>(null);
   const [loadedMotivo, setLoadedMotivo] = useState<string | null>(null);
+  const [loadedLlamado, setLoadedLlamado] = useState(false);
   const lookupTimer = useRef<number | null>(null);
   const lastLookupRef = useRef('');
 
@@ -321,6 +328,25 @@ export function TurnoFormDialog({
       rol: user.rol,
       estado: loadedEstado,
     });
+  const showLlamar =
+    isDetail &&
+    loadedEstado !== null &&
+    loadedFecha !== null &&
+    canLlamarTurno({
+      rol: user.rol,
+      estado: loadedEstado,
+      fecha: loadedFecha,
+    });
+  const showFinalizar =
+    isDetail &&
+    loadedEstado !== null &&
+    loadedFecha !== null &&
+    canFinalizarTurno({
+      rol: user.rol,
+      estado: loadedEstado,
+      fecha: loadedFecha,
+      llamado: loadedLlamado,
+    });
   const showMotivoCancelacion = isDetail && loadedEstado === 'CANCELADO';
   const isValid = form.formState.isValid;
   const isDirty = form.formState.isDirty;
@@ -347,6 +373,7 @@ export function TurnoFormDialog({
     setLoadedEstado(null);
     setLoadedFecha(null);
     setLoadedMotivo(null);
+    setLoadedLlamado(false);
     const defaults = emptyTurnoFormValues();
     if (mode.kind === 'create') {
       if (mode.fecha) {
@@ -368,6 +395,7 @@ export function TurnoFormDialog({
     setLoadedEstado(turno.estado);
     setLoadedFecha(turno.fecha);
     setLoadedMotivo(turno.motivoCancelacion);
+    setLoadedLlamado(turno.llamado);
     setPacienteLocked(true);
     lastLookupRef.current = turno.paciente.documento;
     form.reset(valuesFromDetalle(turno));
@@ -571,6 +599,34 @@ export function TurnoFormDialog({
     }
   }
 
+  /**
+   * Llama al paciente y deja el popup abierto.
+   */
+  async function handleLlamar(): Promise<void> {
+    if (!turnoId) {
+      return;
+    }
+    const ok = await llamar(turnoId);
+    if (ok) {
+      setLoadedLlamado(true);
+      onSaved();
+    }
+  }
+
+  /**
+   * Finaliza el turno del detalle y cierra el popup si sale bien.
+   */
+  async function handleFinalizar(): Promise<void> {
+    if (!turnoId) {
+      return;
+    }
+    const ok = await finalizar(turnoId);
+    if (ok) {
+      onSaved();
+      handleClose();
+    }
+  }
+
   if (!open || !mode) {
     return null;
   }
@@ -597,7 +653,12 @@ export function TurnoFormDialog({
             'linear-gradient(var(--glass-form-bg), var(--glass-form-bg)), url(/images/agenda/appointments-background.png)',
         }}
       >
-        {(loadingDetalle || saving || confirming || canceling) && (
+        {(loadingDetalle ||
+          saving ||
+          confirming ||
+          canceling ||
+          calling ||
+          finishing) && (
           <div
             className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-background/70"
             data-testid="turno-form-overlay"
@@ -899,14 +960,30 @@ export function TurnoFormDialog({
             </div>
           ) : null}
 
-          {isDetail && isMedico ? (
+          {showLlamar ? (
             <div className="mb-4 flex justify-center">
               <button
                 type="button"
-                className="inline-flex cursor-pointer items-center gap-2 rounded-md bg-primary px-10 py-3 text-sm font-semibold uppercase tracking-wide text-primary-foreground hover:bg-primary-hover"
+                disabled={calling || finishing}
+                className="inline-flex cursor-pointer items-center gap-2 rounded-md bg-primary px-10 py-3 text-sm font-semibold uppercase tracking-wide text-primary-foreground hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
+                onClick={() => void handleLlamar()}
               >
                 <Phone className="size-4" aria-hidden />
                 Llamar paciente
+              </button>
+            </div>
+          ) : null}
+
+          {showFinalizar ? (
+            <div className="mb-4 flex justify-center">
+              <button
+                type="button"
+                disabled={calling || finishing}
+                className="inline-flex cursor-pointer items-center gap-2 rounded-md bg-success px-10 py-3 text-sm font-semibold uppercase tracking-wide text-success-foreground hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                onClick={() => void handleFinalizar()}
+              >
+                <Check className="size-4" aria-hidden />
+                Finalizar turno
               </button>
             </div>
           ) : null}

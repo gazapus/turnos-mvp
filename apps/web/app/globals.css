@@ -156,3 +156,80 @@ body {
   background-position: right 0.75rem center;
   background-size: 1rem;
 }
+
+/* Tablero de sala de espera (composición 16:9 para monitor) */
+.sala-espera-screen {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: auto;
+  height: 100%;
+  max-width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border: 4px solid var(--bezel);
+  border-radius: var(--radius-md);
+  background:
+    linear-gradient(var(--canvas-veil-from), var(--canvas-veil-to)),
+    url('/images/sala-espera/background.svg') center / cover no-repeat;
+  box-shadow:
+    var(--shadow-elevated),
+    inset 0 0 0 1px rgb(255 255 255 / 0.55);
+  color: var(--on-elevated);
+}
+
+.sala-espera-screen::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    125deg,
+    transparent 0 38%,
+    var(--shine-diagonal) 39% 50%,
+    transparent 51% 100%
+  );
+  opacity: 0.65;
+}
+
+.sala-espera-glass {
+  background: var(--glass-frost);
+  border: 1px solid var(--glass-frost-border);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.88),
+    0 8px 25px rgb(48 92 132 / 0.08);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.sala-espera-row {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--surface-row) 98%, white),
+    color-mix(in srgb, var(--surface-row) 94%, white)
+  );
+}
+
+.sala-espera-row-featured {
+  background: linear-gradient(
+    90deg,
+    var(--highlight-from) 0%,
+    var(--highlight-via) 55%,
+    var(--highlight-to) 100%
+  );
+  box-shadow:
+    var(--highlight-shadow),
+    inset 0 1px 0 rgb(255 255 255 / 0.3);
+}
+
+.sala-espera-panel:fullscreen {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  aspect-ratio: auto;
+  border-radius: 0;
+  border-width: 0;
+  box-sizing: border-box;
+}

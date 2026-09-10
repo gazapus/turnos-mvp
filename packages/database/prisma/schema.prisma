@@ -165,9 +165,12 @@ model BloqueoAgenda {
 // Alimenta la pantalla de sala de espera (últimos 5 turnos anunciados)
 // sin necesidad de un estado adicional en la tabla de turnos.
 model LlamadoTurno {
-  id        String   @id @default(uuid())
-  turnoId   String   @map("turno_id")
-  llamadoEn DateTime @default(now()) @map("llamado_en")
+  id                String   @id @default(uuid())
+  turnoId           String   @map("turno_id")
+  llamadoEn         DateTime @default(now()) @map("llamado_en")
+  pacienteNombre    String   @map("paciente_nombre")
+  pacienteApellido  String   @map("paciente_apellido")
+  consultorioNumero Int      @map("consultorio_numero")
 
   turno Turno @relation(fields: [turnoId], references: [id])
 

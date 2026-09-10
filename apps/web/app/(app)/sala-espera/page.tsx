@@ -1,17 +1,14 @@
+import { SalaEsperaContent } from '@/components/sala-espera';
+
 /**
- * Stub del panel de sala de espera (dentro del shell autenticado).
+ * Pantalla de transmisión de avisos de sala de espera.
  *
- * @returns Placeholder del panel Sala de espera.
+ * @returns Tablero de llamados.
  */
 export default function SalaEsperaPage() {
   return (
-    <section className="flex flex-col gap-2">
-      <h1 className="font-heading text-3xl font-bold text-foreground">
-        Sala de espera
-      </h1>
-      <p className="text-muted-foreground">
-        Transmisión y avisos — próximamente.
-      </p>
+    <section className="flex h-full min-h-0 flex-col">
+      <SalaEsperaContent />
     </section>
   );
 }

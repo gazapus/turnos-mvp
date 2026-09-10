@@ -43,6 +43,14 @@ Actualizar este archivo cuando se agreguen tokens en `tokens.css`.
 | `--success-foreground` | `text-success-foreground` | Texto sobre success |
 | `--warning` | `bg-warning`, `text-warning` | Advertencias |
 | `--warning-foreground` | `text-warning-foreground` | Texto sobre warning |
+| `--surface-canvas` | `bg-surface-canvas` | Lienzo claro de monitor / fondos clínicos |
+| `--surface-row` | `bg-surface-row` | Fila secundaria de listados destacados |
+| `--bezel` | `border-bezel` | Marco de monitor / bisel |
+| `--rule-soft` | `bg-rule-soft` | Filete decorativo |
+| `--motto-rule` | `border-motto-rule` | Separador de lema |
+| `--column-rule` | `border-column-rule` | Divisor de columnas de tabla |
+| `--glass-frost` | (CSS `.sala-espera-glass`) | Panel translúcido |
+| `--highlight-from/via/to` | (CSS `.sala-espera-row-featured`) | Gradiente de fila destacada |
 | `--estado-programado-soft` | `bg-estado-programado-soft` | Fondo claro de card Programado (vista Día) |
 | `--estado-confirmado-soft` | `bg-estado-confirmado-soft` | Fondo claro de card Confirmado (vista Día) |
 | `--estado-atendido-soft` | `bg-estado-atendido-soft` | Fondo claro de card Atendido (vista Día) |

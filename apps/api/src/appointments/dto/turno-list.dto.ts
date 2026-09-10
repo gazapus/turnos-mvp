@@ -27,6 +27,7 @@ type TurnoWithRelations = Turno & {
   paciente: { nombre: string; apellido: string };
   medico: { nombre: string; apellido: string };
   especialidad: { nombre: string };
+  _count?: { llamados: number };
 };
 
 /**
@@ -140,6 +141,9 @@ export class TurnoListItemResponseDto implements TurnoListItemDto {
   @ApiProperty({ enum: TIPO_TURNO })
   tipo!: TipoTurno;
 
+  @ApiProperty({ description: 'True si el turno tiene al menos un llamado' })
+  llamado!: boolean;
+
   /**
    * Mapea un turno Prisma con relaciones a TurnoListItemResponseDto.
    *
@@ -163,6 +167,7 @@ export class TurnoListItemResponseDto implements TurnoListItemDto {
     dto.especialidad = { nombre: turno.especialidad.nombre };
     dto.estado = turno.estado;
     dto.tipo = turno.tipo;
+    dto.llamado = (turno._count?.llamados ?? 0) > 0;
     return dto;
   }
 }

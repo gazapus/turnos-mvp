@@ -10,10 +10,15 @@ import { EstadoTurno, RolUsuario, TipoTurno } from '@turnos/database';
 import { AppointmentsController } from './appointments.controller';
 import { AppointmentsService } from './appointments.service';
 import { JwtAuthGuard } from '../auth';
+import { WaitingRoomEvents } from '../waiting-room';
 import {
   CANCELAR_TURNO_ESTADO_INVALIDO,
   CONFIRMAR_TURNO_SOLO_HOY,
   CONFIRMAR_TURNO_SOLO_PROGRAMADO,
+  FINALIZAR_SIN_LLAMADO,
+  LLAMAR_SIN_CONSULTORIO,
+  LLAMAR_TURNO_SOLO_CONFIRMADO,
+  LLAMAR_TURNO_SOLO_HOY,
   clinicDateTimeFromYmdHm,
   clinicDayRangeFromYmd,
   formatClinicDate,
@@ -30,6 +35,9 @@ const mockPacienteFindUnique = jest.fn();
 const mockPacienteCreate = jest.fn();
 const mockUsuarioFindUnique = jest.fn();
 const mockLinkFindUnique = jest.fn();
+const mockLlamadoCreate = jest.fn();
+const mockConsultorioFindUnique = jest.fn();
+const mockEmitLlamado = jest.fn();
 
 /**
  * Primer argumento de la última invocación a prisma.turno.findMany.
@@ -103,6 +111,7 @@ function detalleEntity(overrides: Record<string, unknown> = {}) {
     },
     medico: { nombre: 'Carlos', apellido: 'Médico' },
     especialidad: { nombre: 'Cardiología' },
+    _count: { llamados: 0 },
     ...overrides,
   };
 }
@@ -148,6 +157,16 @@ jest.mock('@turnos/database', () => {
         return mockLinkFindUnique;
       },
     },
+    llamadoTurno: {
+      get create() {
+        return mockLlamadoCreate;
+      },
+    },
+    consultorio: {
+      get findUnique() {
+        return mockConsultorioFindUnique;
+      },
+    },
   };
   return {
     prisma,
@@ -191,8 +210,14 @@ describe('AppointmentsService', () => {
     mockPacienteCreate.mockReset();
     mockUsuarioFindUnique.mockReset();
     mockLinkFindUnique.mockReset();
+    mockLlamadoCreate.mockReset();
+    mockConsultorioFindUnique.mockReset();
+    mockEmitLlamado.mockReset();
     const module: TestingModule = await Test.createTestingModule({
-      providers: [AppointmentsService],
+      providers: [
+        AppointmentsService,
+        { provide: WaitingRoomEvents, useValue: { emit: mockEmitLlamado } },
+      ],
     }).compile();
     service = module.get(AppointmentsService);
   });
@@ -884,6 +909,301 @@ describe('AppointmentsService', () => {
       }),
     );
   });
+
+  it('llama un CONFIRMADO de hoy y emite a sala de espera', async () => {
+    const today = formatClinicDate(new Date());
+    const start = clinicDateTimeFromYmdHm(today, '10:00');
+    mockTurnoFindUnique.mockResolvedValue(
+      detalleEntity({
+        medicoId: 'medico-propio',
+        estado: EstadoTurno.CONFIRMADO,
+        fechaInicio: start,
+        _count: { llamados: 0 },
+      }),
+    );
+    mockConsultorioFindUnique.mockResolvedValue({ id: 'c7', numero: 7 });
+    mockLlamadoCreate.mockResolvedValue({
+      id: 'l1',
+      turnoId: 't1',
+      llamadoEn: new Date(),
+      pacienteNombre: 'María',
+      pacienteApellido: 'González',
+      consultorioNumero: 7,
+    });
+
+    const result = await service.llamarTurno('t1', {
+      sub: 'medico-propio',
+      mail: 'm@x.c',
+      rol: RolUsuario.MEDICO,
+    });
+
+    expect(result.llamado).toBe(true);
+    expect(result.estado).toBe(EstadoTurno.CONFIRMADO);
+    expect(mockEmitLlamado).toHaveBeenCalledTimes(1);
+  });
+
+  it('un segundo llamado inserta otro aviso', async () => {
+    const today = formatClinicDate(new Date());
+    const start = clinicDateTimeFromYmdHm(today, '10:00');
+    mockTurnoFindUnique.mockResolvedValue(
+      detalleEntity({
+        medicoId: 'medico-propio',
+        estado: EstadoTurno.CONFIRMADO,
+        fechaInicio: start,
+        _count: { llamados: 1 },
+      }),
+    );
+    mockConsultorioFindUnique.mockResolvedValue({ id: 'c7', numero: 7 });
+    mockLlamadoCreate.mockResolvedValue({
+      id: 'l2',
+      turnoId: 't1',
+      llamadoEn: new Date(),
+      pacienteNombre: 'María',
+      pacienteApellido: 'González',
+      consultorioNumero: 7,
+    });
+
+    const result = await service.llamarTurno('t1', {
+      sub: 'medico-propio',
+      mail: 'm@x.c',
+      rol: RolUsuario.MEDICO,
+    });
+
+    expect(result.llamado).toBe(true);
+    expect(mockLlamadoCreate).toHaveBeenCalledTimes(1);
+    expect(mockEmitLlamado).toHaveBeenCalledTimes(1);
+  });
+
+  it('llamar sin consultorio es 400 y no emite', async () => {
+    const today = formatClinicDate(new Date());
+    const start = clinicDateTimeFromYmdHm(today, '10:00');
+    mockTurnoFindUnique.mockResolvedValue(
+      detalleEntity({
+        medicoId: 'medico-propio',
+        estado: EstadoTurno.CONFIRMADO,
+        fechaInicio: start,
+      }),
+    );
+    mockConsultorioFindUnique.mockResolvedValue(null);
+
+    await expect(
+      service.llamarTurno('t1', {
+        sub: 'medico-propio',
+        mail: 'm@x.c',
+        rol: RolUsuario.MEDICO,
+      }),
+    ).rejects.toThrow(LLAMAR_SIN_CONSULTORIO);
+    expect(mockLlamadoCreate).not.toHaveBeenCalled();
+    expect(mockEmitLlamado).not.toHaveBeenCalled();
+  });
+
+  it('llamar rechaza si no es hoy', async () => {
+    mockTurnoFindUnique.mockResolvedValue(
+      detalleEntity({
+        medicoId: 'medico-propio',
+        estado: EstadoTurno.CONFIRMADO,
+      }),
+    );
+
+    await expect(
+      service.llamarTurno('t1', {
+        sub: 'medico-propio',
+        mail: 'm@x.c',
+        rol: RolUsuario.MEDICO,
+      }),
+    ).rejects.toThrow(LLAMAR_TURNO_SOLO_HOY);
+    expect(mockEmitLlamado).not.toHaveBeenCalled();
+  });
+
+  it('llamar rechaza si no está confirmado', async () => {
+    const today = formatClinicDate(new Date());
+    const start = clinicDateTimeFromYmdHm(today, '10:00');
+    mockTurnoFindUnique.mockResolvedValue(
+      detalleEntity({
+        medicoId: 'medico-propio',
+        estado: EstadoTurno.PROGRAMADO,
+        fechaInicio: start,
+      }),
+    );
+
+    await expect(
+      service.llamarTurno('t1', {
+        sub: 'medico-propio',
+        mail: 'm@x.c',
+        rol: RolUsuario.MEDICO,
+      }),
+    ).rejects.toThrow(LLAMAR_TURNO_SOLO_CONFIRMADO);
+  });
+
+  it('recepcionista no puede llamar', async () => {
+    await expect(
+      service.llamarTurno('t1', {
+        sub: 'recep-1',
+        mail: 'r@x.c',
+        rol: RolUsuario.RECEPCIONISTA,
+      }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(mockTurnoFindUnique).not.toHaveBeenCalled();
+  });
+
+  it('médico ajeno recibe 404 al llamar', async () => {
+    mockTurnoFindUnique.mockResolvedValue(
+      detalleEntity({ medicoId: 'otro' }),
+    );
+
+    await expect(
+      service.llamarTurno('t1', {
+        sub: 'medico-propio',
+        mail: 'm@x.c',
+        rol: RolUsuario.MEDICO,
+      }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('finaliza un CONFIRMADO de hoy ya llamado', async () => {
+    const today = formatClinicDate(new Date());
+    const range = clinicDayRangeFromYmd(today);
+    const start = clinicDateTimeFromYmdHm(today, '10:00');
+    mockTurnoFindUnique
+      .mockResolvedValueOnce(
+        detalleEntity({
+          medicoId: 'medico-propio',
+          estado: EstadoTurno.CONFIRMADO,
+          fechaInicio: start,
+          _count: { llamados: 1 },
+        }),
+      )
+      .mockResolvedValueOnce(
+        detalleEntity({
+          medicoId: 'medico-propio',
+          estado: EstadoTurno.ATENDIDO,
+          fechaInicio: start,
+          _count: { llamados: 1 },
+        }),
+      );
+    mockTurnoUpdateMany.mockResolvedValue({ count: 1 });
+
+    const result = await service.finalizarTurno('t1', {
+      sub: 'medico-propio',
+      mail: 'm@x.c',
+      rol: RolUsuario.MEDICO,
+    });
+
+    expect(mockTurnoUpdateMany).toHaveBeenCalledWith({
+      where: {
+        id: 't1',
+        estado: EstadoTurno.CONFIRMADO,
+        fechaInicio: { gte: range?.start, lt: range?.end },
+      },
+      data: { estado: EstadoTurno.ATENDIDO },
+    });
+    expect(result.estado).toBe(EstadoTurno.ATENDIDO);
+  });
+
+  it('finalizar sin llamados es 400', async () => {
+    const today = formatClinicDate(new Date());
+    const start = clinicDateTimeFromYmdHm(today, '10:00');
+    mockTurnoFindUnique.mockResolvedValue(
+      detalleEntity({
+        medicoId: 'medico-propio',
+        estado: EstadoTurno.CONFIRMADO,
+        fechaInicio: start,
+        _count: { llamados: 0 },
+      }),
+    );
+
+    await expect(
+      service.finalizarTurno('t1', {
+        sub: 'medico-propio',
+        mail: 'm@x.c',
+        rol: RolUsuario.MEDICO,
+      }),
+    ).rejects.toThrow(FINALIZAR_SIN_LLAMADO);
+    expect(mockTurnoUpdateMany).not.toHaveBeenCalled();
+  });
+
+  it('finalizar un ATENDIDO es 400', async () => {
+    const today = formatClinicDate(new Date());
+    const start = clinicDateTimeFromYmdHm(today, '10:00');
+    mockTurnoFindUnique.mockResolvedValue(
+      detalleEntity({
+        medicoId: 'medico-propio',
+        estado: EstadoTurno.ATENDIDO,
+        fechaInicio: start,
+        _count: { llamados: 1 },
+      }),
+    );
+
+    await expect(
+      service.finalizarTurno('t1', {
+        sub: 'medico-propio',
+        mail: 'm@x.c',
+        rol: RolUsuario.MEDICO,
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(mockTurnoUpdateMany).not.toHaveBeenCalled();
+  });
+
+  it('recepcionista no puede finalizar', async () => {
+    await expect(
+      service.finalizarTurno('t1', {
+        sub: 'recep-1',
+        mail: 'r@x.c',
+        rol: RolUsuario.RECEPCIONISTA,
+      }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('médico ajeno recibe 404 al finalizar', async () => {
+    mockTurnoFindUnique.mockResolvedValue(
+      detalleEntity({ medicoId: 'otro', _count: { llamados: 1 } }),
+    );
+
+    await expect(
+      service.finalizarTurno('t1', {
+        sub: 'medico-propio',
+        mail: 'm@x.c',
+        rol: RolUsuario.MEDICO,
+      }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('listado incluye llamado verdadero cuando hay avisos', async () => {
+    mockFindMany.mockResolvedValue([
+      {
+        id: 't1',
+        fechaInicio: new Date('2026-08-16T12:00:00.000Z'),
+        fechaFin: new Date('2026-08-16T12:30:00.000Z'),
+        estado: EstadoTurno.CONFIRMADO,
+        tipo: 'CONTROL',
+        paciente: { nombre: 'A', apellido: 'B' },
+        medico: { nombre: 'C', apellido: 'D' },
+        especialidad: { nombre: 'Cardiología' },
+        _count: { llamados: 2 },
+      },
+    ]);
+
+    const result = await service.listTurnos(
+      { fecha: '2026-08-16', soloPendientes: false },
+      { sub: 'admin', mail: 'a@b.c', rol: 'ADMIN' },
+    );
+
+    expect(result.items[0]?.llamado).toBe(true);
+  });
+
+  it('detalle sin llamados trae llamado falso', async () => {
+    mockTurnoFindUnique.mockResolvedValue(
+      detalleEntity({ _count: { llamados: 0 } }),
+    );
+
+    const result = await service.findById('t1', {
+      sub: 'recep-1',
+      mail: 'r@x.c',
+      rol: RolUsuario.RECEPCIONISTA,
+    });
+
+    expect(result.llamado).toBe(false);
+  });
 });
 
 describe('AppointmentsController', () => {
@@ -893,6 +1213,8 @@ describe('AppointmentsController', () => {
     createTurno: jest.Mock;
     confirmarTurno: jest.Mock;
     cancelarTurno: jest.Mock;
+    llamarTurno: jest.Mock;
+    finalizarTurno: jest.Mock;
   };
 
   beforeEach(async () => {
@@ -901,6 +1223,8 @@ describe('AppointmentsController', () => {
       createTurno: jest.fn(),
       confirmarTurno: jest.fn(),
       cancelarTurno: jest.fn(),
+      llamarTurno: jest.fn(),
+      finalizarTurno: jest.fn(),
     };
     const module: TestingModule = await Test.createTestingModule({
       controllers: [AppointmentsController],
@@ -989,5 +1313,36 @@ describe('AppointmentsController', () => {
         rol: 'RECEPCIONISTA',
       },
     );
+  });
+
+  it('delega llamar al servicio', async () => {
+    service.llamarTurno.mockResolvedValue({
+      id: 't1',
+      estado: 'CONFIRMADO',
+      llamado: true,
+    });
+    await controller.llamar('t1', {
+      user: { sub: 'm1', mail: 'm@x.c', rol: 'MEDICO' },
+    } as never);
+    expect(service.llamarTurno).toHaveBeenCalledWith('t1', {
+      sub: 'm1',
+      mail: 'm@x.c',
+      rol: 'MEDICO',
+    });
+  });
+
+  it('delega finalizar al servicio', async () => {
+    service.finalizarTurno.mockResolvedValue({
+      id: 't1',
+      estado: 'ATENDIDO',
+    });
+    await controller.finalizar('t1', {
+      user: { sub: 'm1', mail: 'm@x.c', rol: 'MEDICO' },
+    } as never);
+    expect(service.finalizarTurno).toHaveBeenCalledWith('t1', {
+      sub: 'm1',
+      mail: 'm@x.c',
+      rol: 'MEDICO',
+    });
   });
 });

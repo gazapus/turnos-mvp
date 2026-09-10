@@ -5,16 +5,20 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { FeedbackProvider } from '@/components/ui';
 import { todayYmd } from '@/lib/agenda/fecha-dia';
-import { cancelarTurno, confirmarTurno } from '@/lib/api/turnos-client';
+import { cancelarTurno, confirmarTurno, finalizarTurno, llamarTurno } from '@/lib/api/turnos-client';
 import { TurnoAcciones } from './turno-acciones';
 
 vi.mock('@/lib/api/turnos-client', () => ({
   confirmarTurno: vi.fn(),
   cancelarTurno: vi.fn(),
+  llamarTurno: vi.fn(),
+  finalizarTurno: vi.fn(),
 }));
 
 const mockConfirmarTurno = vi.mocked(confirmarTurno);
 const mockCancelarTurno = vi.mocked(cancelarTurno);
+const mockLlamarTurno = vi.mocked(llamarTurno);
+const mockFinalizarTurno = vi.mocked(finalizarTurno);
 
 /**
  * Render con FeedbackProvider.
@@ -39,6 +43,7 @@ describe('TurnoAcciones', () => {
         estado="PROGRAMADO"
         fecha={todayYmd()}
         turnoId="t1"
+        llamado={false}
         onConfirmado={vi.fn()}
       />,
     );
@@ -57,6 +62,7 @@ describe('TurnoAcciones', () => {
         estado="PROGRAMADO"
         fecha="2099-01-15"
         turnoId="t1"
+        llamado={false}
         onConfirmado={vi.fn()}
       />,
     );
@@ -75,6 +81,7 @@ describe('TurnoAcciones', () => {
         estado="CONFIRMADO"
         fecha={todayYmd()}
         turnoId="t1"
+        llamado={false}
         onConfirmado={vi.fn()}
       />,
     );
@@ -93,6 +100,7 @@ describe('TurnoAcciones', () => {
         estado="ATENDIDO"
         fecha={todayYmd()}
         turnoId="t1"
+        llamado={false}
         onConfirmado={vi.fn()}
       />,
     );
@@ -107,6 +115,7 @@ describe('TurnoAcciones', () => {
           estado="AUSENTE"
           fecha={todayYmd()}
           turnoId="t1"
+          llamado={false}
           onConfirmado={vi.fn()}
         />
       </FeedbackProvider>,
@@ -122,6 +131,7 @@ describe('TurnoAcciones', () => {
           estado="CANCELADO"
           fecha={todayYmd()}
           turnoId="t1"
+          llamado={false}
           onConfirmado={vi.fn()}
         />
       </FeedbackProvider>,
@@ -134,13 +144,36 @@ describe('TurnoAcciones', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('muestra llamar y finalizar para médico', () => {
+  it('muestra llamar para médico en confirmado de hoy sin llamado', () => {
     renderAcciones(
       <TurnoAcciones
         rol="MEDICO"
-        estado="PROGRAMADO"
+        estado="CONFIRMADO"
         fecha={todayYmd()}
         turnoId="t1"
+        llamado={false}
+        onConfirmado={vi.fn()}
+      />,
+    );
+    expect(
+      screen.getByRole('button', { name: /llamar al paciente/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /finalizar turno/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /confirmar paciente/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('muestra llamar y finalizar para médico ya llamado', () => {
+    renderAcciones(
+      <TurnoAcciones
+        rol="MEDICO"
+        estado="CONFIRMADO"
+        fecha={todayYmd()}
+        turnoId="t1"
+        llamado={true}
         onConfirmado={vi.fn()}
       />,
     );
@@ -150,11 +183,24 @@ describe('TurnoAcciones', () => {
     expect(
       screen.getByRole('button', { name: /finalizar turno/i }),
     ).toBeInTheDocument();
+  });
+
+  it('oculta llamar y finalizar si el médico ve un programado', () => {
+    renderAcciones(
+      <TurnoAcciones
+        rol="MEDICO"
+        estado="PROGRAMADO"
+        fecha={todayYmd()}
+        turnoId="t1"
+        llamado={false}
+        onConfirmado={vi.fn()}
+      />,
+    );
     expect(
-      screen.queryByRole('button', { name: /confirmar paciente/i }),
+      screen.queryByRole('button', { name: /llamar al paciente/i }),
     ).not.toBeInTheDocument();
     expect(
-      screen.queryByRole('button', { name: /cancelar turno/i }),
+      screen.queryByRole('button', { name: /finalizar turno/i }),
     ).not.toBeInTheDocument();
   });
 
@@ -169,6 +215,7 @@ describe('TurnoAcciones', () => {
         estado="PROGRAMADO"
         fecha={todayYmd()}
         turnoId="t1"
+        llamado={false}
         onConfirmado={onConfirmado}
       />,
     );
@@ -194,6 +241,7 @@ describe('TurnoAcciones', () => {
         estado="PROGRAMADO"
         fecha={todayYmd()}
         turnoId="t1"
+        llamado={false}
         onConfirmado={onConfirmado}
       />,
     );
@@ -222,6 +270,7 @@ describe('TurnoAcciones', () => {
         estado="PROGRAMADO"
         fecha={todayYmd()}
         turnoId="t1"
+        llamado={false}
         onConfirmado={vi.fn()}
       />,
     );
@@ -231,25 +280,48 @@ describe('TurnoAcciones', () => {
     expect(mockCancelarTurno).not.toHaveBeenCalled();
   });
 
-  it('Llamar y Finalizar no llaman al backend', async () => {
+  it('Llamar notifica al padre y no abre el detalle', async () => {
     const user = userEvent.setup();
-    mockConfirmarTurno.mockResolvedValue({} as never);
+    const onConfirmado = vi.fn();
+    mockLlamarTurno.mockResolvedValue({} as never);
 
     renderAcciones(
       <TurnoAcciones
         rol="MEDICO"
-        estado="PROGRAMADO"
+        estado="CONFIRMADO"
         fecha={todayYmd()}
         turnoId="t1"
-        onConfirmado={vi.fn()}
+        llamado={false}
+        onConfirmado={onConfirmado}
       />,
     );
 
     await user.click(
       screen.getByRole('button', { name: /llamar al paciente/i }),
     );
-    await user.click(screen.getByRole('button', { name: /finalizar turno/i }));
-    expect(mockConfirmarTurno).not.toHaveBeenCalled();
-    expect(mockCancelarTurno).not.toHaveBeenCalled();
+    expect(mockLlamarTurno).toHaveBeenCalledWith('t1');
+    expect(onConfirmado).toHaveBeenCalledTimes(1);
+    expect(
+      await screen.findByText(/paciente llamado correctamente/i),
+    ).toBeInTheDocument();
+  });
+
+  it('recepcionista no ve llamar ni finalizar', () => {
+    renderAcciones(
+      <TurnoAcciones
+        rol="RECEPCIONISTA"
+        estado="CONFIRMADO"
+        fecha={todayYmd()}
+        turnoId="t1"
+        llamado={true}
+        onConfirmado={vi.fn()}
+      />,
+    );
+    expect(
+      screen.queryByRole('button', { name: /llamar al paciente/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /finalizar turno/i }),
+    ).not.toBeInTheDocument();
   });
 });

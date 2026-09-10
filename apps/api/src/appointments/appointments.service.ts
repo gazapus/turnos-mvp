@@ -17,6 +17,12 @@ import {
   CANCELAR_TURNO_ESTADO_INVALIDO,
   CONFIRMAR_TURNO_SOLO_HOY,
   CONFIRMAR_TURNO_SOLO_PROGRAMADO,
+  FINALIZAR_SIN_LLAMADO,
+  FINALIZAR_TURNO_SOLO_CONFIRMADO,
+  FINALIZAR_TURNO_SOLO_HOY,
+  LLAMAR_SIN_CONSULTORIO,
+  LLAMAR_TURNO_SOLO_CONFIRMADO,
+  LLAMAR_TURNO_SOLO_HOY,
   CURSOR_NIL_UUID,
   clinicDayRangeFromYmd,
   formatClinicDate,
@@ -37,6 +43,7 @@ import {
   UpsertTurnoDto,
   CancelarTurnoDto,
 } from './dto';
+import { LlamadoSalaEsperaResponseDto, WaitingRoomEvents } from '../waiting-room';
 
 const PAGE_SIZE = 30;
 
@@ -44,12 +51,14 @@ const TURNO_LIST_INCLUDE = {
   paciente: { select: { nombre: true, apellido: true } },
   medico: { select: { nombre: true, apellido: true } },
   especialidad: { select: { nombre: true } },
+  _count: { select: { llamados: true } },
 } as const;
 
 const TURNO_DETALLE_INCLUDE = {
   paciente: true,
   medico: { select: { nombre: true, apellido: true } },
   especialidad: { select: { nombre: true } },
+  _count: { select: { llamados: true } },
 } as const;
 
 type DecodedCursor = {
@@ -69,6 +78,7 @@ type TurnoListFilters = {
  */
 @Injectable()
 export class AppointmentsService {
+  constructor(private readonly waitingRoomEvents: WaitingRoomEvents) {}
   /**
    * Lista turnos paginados por cursor, con scoping por rol de médico.
    *
@@ -352,12 +362,134 @@ export class AppointmentsService {
   }
 
   /**
+   * Registra un llamado a sala de espera sin cambiar el estado del turno.
+   *
+   * @param id - UUID del turno.
+   * @param user - Usuario autenticado.
+   * @returns Detalle con `llamado` verdadero.
+   */
+  async llamarTurno(
+    id: string,
+    user: JwtPayload,
+  ): Promise<TurnoDetalleResponseDto> {
+    this.assertMedico(user);
+
+    const turno = await prisma.turno.findUnique({
+      where: { id },
+      include: TURNO_DETALLE_INCLUDE,
+    });
+    if (!turno || turno.medicoId !== user.sub) {
+      throw new NotFoundException('Turno no encontrado');
+    }
+    if (turno.estado !== EstadoTurno.CONFIRMADO) {
+      throw new BadRequestException(LLAMAR_TURNO_SOLO_CONFIRMADO);
+    }
+    if (!isClinicDateToday(formatClinicDate(turno.fechaInicio))) {
+      throw new BadRequestException(LLAMAR_TURNO_SOLO_HOY);
+    }
+
+    const consultorio = await prisma.consultorio.findUnique({
+      where: { medicoId: turno.medicoId },
+    });
+    if (!consultorio) {
+      throw new BadRequestException(LLAMAR_SIN_CONSULTORIO);
+    }
+
+    const llamado = await prisma.llamadoTurno.create({
+      data: {
+        turnoId: turno.id,
+        pacienteNombre: turno.paciente.nombre,
+        pacienteApellido: turno.paciente.apellido,
+        consultorioNumero: consultorio.numero,
+      },
+    });
+
+    this.waitingRoomEvents.emit(
+      LlamadoSalaEsperaResponseDto.fromEntity(llamado),
+    );
+
+    return TurnoDetalleResponseDto.fromEntity({
+      ...turno,
+      _count: { llamados: turno._count.llamados + 1 },
+    });
+  }
+
+  /**
+   * Pasa un turno llamado de CONFIRMADO a ATENDIDO.
+   *
+   * @param id - UUID del turno.
+   * @param user - Usuario autenticado.
+   * @returns Detalle con estado ATENDIDO.
+   */
+  async finalizarTurno(
+    id: string,
+    user: JwtPayload,
+  ): Promise<TurnoDetalleResponseDto> {
+    this.assertMedico(user);
+
+    const today = formatClinicDate(new Date());
+    const range = clinicDayRangeFromYmd(today);
+    if (!range) {
+      throw new BadRequestException(FINALIZAR_TURNO_SOLO_HOY);
+    }
+
+    const existing = await prisma.turno.findUnique({
+      where: { id },
+      include: { _count: { select: { llamados: true } } },
+    });
+    if (!existing || existing.medicoId !== user.sub) {
+      throw new NotFoundException('Turno no encontrado');
+    }
+    if (existing.estado !== EstadoTurno.CONFIRMADO) {
+      throw new BadRequestException(FINALIZAR_TURNO_SOLO_CONFIRMADO);
+    }
+    if (!isClinicDateToday(formatClinicDate(existing.fechaInicio))) {
+      throw new BadRequestException(FINALIZAR_TURNO_SOLO_HOY);
+    }
+    if (existing._count.llamados === 0) {
+      throw new BadRequestException(FINALIZAR_SIN_LLAMADO);
+    }
+
+    const updated = await prisma.turno.updateMany({
+      where: {
+        id,
+        estado: EstadoTurno.CONFIRMADO,
+        fechaInicio: { gte: range.start, lt: range.end },
+      },
+      data: { estado: EstadoTurno.ATENDIDO },
+    });
+    if (updated.count === 0) {
+      throw new BadRequestException(FINALIZAR_TURNO_SOLO_CONFIRMADO);
+    }
+
+    const turno = await prisma.turno.findUnique({
+      where: { id },
+      include: TURNO_DETALLE_INCLUDE,
+    });
+    if (!turno) {
+      throw new NotFoundException('Turno no encontrado');
+    }
+    return TurnoDetalleResponseDto.fromEntity(turno);
+  }
+
+  /**
    * Prohíbe escritura al rol médico.
    *
    * @param user - JWT.
    */
   private assertCanWrite(user: JwtPayload): void {
     if (user.rol === RolUsuario.MEDICO) {
+      throw new ForbiddenException('No autorizado');
+    }
+  }
+
+  /**
+   * Exige rol médico para llamar o finalizar.
+   *
+   * @param user - JWT.
+   */
+  private assertMedico(user: JwtPayload): void {
+    if (user.rol !== RolUsuario.MEDICO) {
       throw new ForbiddenException('No autorizado');
     }
   }

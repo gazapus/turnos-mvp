@@ -237,6 +237,7 @@ export function TurnosListado({
                     estado={turno.estado}
                     fecha={turno.fecha}
                     turnoId={turno.id}
+                    llamado={turno.llamado}
                     onConfirmado={onConfirmado}
                   />
                 </td>

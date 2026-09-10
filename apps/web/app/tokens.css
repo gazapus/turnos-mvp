@@ -93,6 +93,23 @@
   --nav-active-fg: #007070;
   --nav-active-border: #006a6a;
   --help-bot-shadow: 0 4px 15px rgba(0, 106, 106, 0.4);
+
+  /* Superficie de monitor / filas destacadas (reutilizable) */
+  --surface-canvas: #d8edf9;
+  --surface-row: #e5f1fb;
+  --bezel: #173d5a;
+  --rule-soft: #6bb8da;
+  --motto-rule: #9abfda;
+  --column-rule: rgba(116, 176, 213, 0.42);
+  --glass-frost: rgba(255, 255, 255, 0.48);
+  --glass-frost-border: rgba(177, 210, 233, 0.72);
+  --canvas-veil-from: rgba(250, 253, 255, 0.9);
+  --canvas-veil-to: rgba(239, 248, 254, 0.92);
+  --shine-diagonal: rgba(255, 255, 255, 0.36);
+  --highlight-from: #0a78be;
+  --highlight-via: #0794cf;
+  --highlight-to: #06afc3;
+  --highlight-shadow: 0 8px 18px rgba(0, 111, 170, 0.25);
 }
 
 @theme {
@@ -143,6 +160,19 @@
 
   --shadow-brand-panel: var(--shadow-brand-panel);
   --shadow-elevated: var(--shadow-elevated);
+  --shadow-highlight: var(--highlight-shadow);
+
+  --color-surface-canvas: var(--surface-canvas);
+  --color-surface-row: var(--surface-row);
+  --color-bezel: var(--bezel);
+  --color-rule-soft: var(--rule-soft);
+  --color-motto-rule: var(--motto-rule);
+  --color-column-rule: var(--column-rule);
+  --color-glass-frost: var(--glass-frost);
+  --color-glass-frost-border: var(--glass-frost-border);
+  --color-highlight-from: var(--highlight-from);
+  --color-highlight-via: var(--highlight-via);
+  --color-highlight-to: var(--highlight-to);
 
   /* Tipografía — Inter / Montserrat se definen en apps/web/app/layout.tsx */
   --font-sans: var(--font-inter);

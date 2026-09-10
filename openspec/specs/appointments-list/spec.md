@@ -1,6 +1,6 @@
 ## Purpose
 
-Modo de visualización Lista de la Agenda: grilla de turnos con paginación por cursor solo hacia adelante, representación visual de estado y tipo, acciones por rol (Confirmar ejecuta la transición de `appointments-confirm`; Cancelar ejecuta la de `appointments-cancel`; Llamar y Finalizar siguen stubs), contrato de backend `GET /api/turnos` y endpoints de soporte para filtros.
+Modo de visualización Lista de la Agenda: grilla de turnos con paginación por cursor solo hacia adelante, representación visual de estado y tipo, acciones por rol (Confirmar ejecuta la transición de `appointments-confirm`; Cancelar ejecuta la de `appointments-cancel`; Llamar ejecuta el llamado de `appointments-call`; Finalizar ejecuta la de `appointments-finalize`), contrato de backend `GET /api/turnos` y endpoints de soporte para filtros.
 
 ## Requirements
 
@@ -43,7 +43,7 @@ El sistema SHALL representar el tipo de cada turno mediante un ícono en la colu
 
 ### Requirement: Botones de acción por rol
 
-El sistema SHALL mostrar en la columna "Acciones" icon-buttons según el rol del usuario autenticado. Recepcionista y Administrador ven Confirmar (check) solo cuando el turno está `PROGRAMADO` y su fecha civil de clínica es hoy, y Cancelar (X roja) solo cuando el turno está `PROGRAMADO` o `CONFIRMADO` (cualquier fecha); Médico ve Llamar (teléfono) y Finalizar (check verde) en toda fila. Cada botón visible MUST mostrar un tooltip con su nombre de acción. Confirmar MUST ejecutar la transición de `appointments-confirm`. Cancelar MUST ejecutar la transición de `appointments-cancel`. Llamar y Finalizar MUST permanecer stubs (no llaman al backend).
+El sistema SHALL mostrar en la columna "Acciones" icon-buttons según el rol del usuario autenticado. Recepcionista y Administrador ven Confirmar (check) solo cuando el turno está `PROGRAMADO` y su fecha civil de clínica es hoy, y Cancelar (X roja) solo cuando el turno está `PROGRAMADO` o `CONFIRMADO` (cualquier fecha). Médico ve Llamar (teléfono) solo cuando el turno está `CONFIRMADO` y su fecha civil de clínica es hoy, y Finalizar (check verde) solo cuando además `llamado` es verdadero. Cada botón visible MUST mostrar un tooltip con su nombre de acción. Confirmar MUST ejecutar la transición de `appointments-confirm`. Cancelar MUST ejecutar la transición de `appointments-cancel`. Llamar MUST ejecutar el llamado de `appointments-call`. Finalizar MUST ejecutar la transición de `appointments-finalize`.
 
 #### Scenario: Acciones para recepcionista o administrador en un programado de hoy
 
@@ -60,15 +60,20 @@ El sistema SHALL mostrar en la columna "Acciones" icon-buttons según el rol del
 - **WHEN** un usuario con rol Recepcionista o Administrador visualiza una fila `ATENDIDO`, `AUSENTE` o `CANCELADO`
 - **THEN** la columna de acciones no muestra Cancelar ni Confirmar
 
-#### Scenario: Acciones para médico
+#### Scenario: Acciones para médico en confirmado de hoy sin llamado
 
-- **WHEN** un usuario con rol Médico visualiza una fila de turno
-- **THEN** la columna de acciones muestra los botones Llamar y Finalizar, con tooltips "Llamar al paciente" y "Finalizar turno" respectivamente
+- **WHEN** un usuario con rol Médico visualiza una fila `CONFIRMADO` de hoy con `llamado` falso
+- **THEN** la columna de acciones muestra Llamar con tooltip "Llamar al paciente" y no muestra Finalizar
 
-#### Scenario: Click en Llamar o Finalizar no ejecuta nada
+#### Scenario: Acciones para médico en confirmado de hoy ya llamado
 
-- **WHEN** el usuario activa Llamar o Finalizar en la columna de acciones
-- **THEN** el sistema no cambia el estado del turno ni realiza ninguna llamada al backend
+- **WHEN** un usuario con rol Médico visualiza una fila `CONFIRMADO` de hoy con `llamado` verdadero
+- **THEN** la columna de acciones muestra Llamar y Finalizar, con tooltips "Llamar al paciente" y "Finalizar turno" respectivamente
+
+#### Scenario: Acciones para médico ocultas si no aplica
+
+- **WHEN** un usuario con rol Médico visualiza una fila `PROGRAMADO`, `ATENDIDO`, o `CONFIRMADO` cuya fecha civil no es hoy
+- **THEN** la columna de acciones no muestra Llamar ni Finalizar
 
 ### Requirement: Scroll infinito solo hacia adelante anclado al día actual
 
@@ -96,7 +101,7 @@ El sistema SHALL cargar los turnos del modo Lista en páginas de 30, sin `offset
 
 ### Requirement: Contrato de backend para el listado de turnos
 
-El sistema SHALL exponer `GET /api/turnos` protegido por sesión autenticada (cualquier rol), que acepta filtros por médico, especialidad, paciente y `soloPendientes`, un filtro opcional de fecha exacta, y paginación por cursor. La respuesta MUST incluir únicamente los campos necesarios para el listado: id, fecha, hora, hora de fin, datos mínimos de paciente (nombre, apellido), médico (nombre, apellido) y especialidad (nombre), estado y tipo. Las respuestas MUST no cachearse (sin encabezados de caché HTTP que permitan servir una respuesta obsoleta).
+El sistema SHALL exponer `GET /api/turnos` protegido por sesión autenticada (cualquier rol), que acepta filtros por médico, especialidad, paciente y `soloPendientes`, un filtro opcional de fecha exacta, y paginación por cursor. La respuesta MUST incluir únicamente los campos necesarios para el listado: id, fecha, hora, hora de fin, datos mínimos de paciente (nombre, apellido), médico (nombre, apellido) y especialidad (nombre), estado, tipo y `llamado`. Las respuestas MUST no cachearse (sin encabezados de caché HTTP que permitan servir una respuesta obsoleta).
 
 #### Scenario: Acceso sin sesión
 
@@ -106,7 +111,7 @@ El sistema SHALL exponer `GET /api/turnos` protegido por sesión autenticada (cu
 #### Scenario: Respuesta con DTO mínimo
 
 - **WHEN** un usuario autenticado consulta `GET /api/turnos`
-- **THEN** cada turno de la respuesta expone únicamente id, fecha, hora, hora de fin, paciente (nombre y apellido), médico (nombre y apellido), especialidad (nombre), estado y tipo, sin exponer campos internos de la entidad
+- **THEN** cada turno de la respuesta expone únicamente id, fecha, hora, hora de fin, paciente (nombre y apellido), médico (nombre y apellido), especialidad (nombre), estado, tipo y `llamado`, sin exponer campos internos de la entidad
 
 ### Requirement: Filtro soloPendientes en GET /api/turnos
 
@@ -216,7 +221,7 @@ El sistema SHALL proveer, vía el script de seed del paquete de base de datos, u
 
 ### Requirement: Click en fila abre el detalle de turno
 
-El sistema SHALL abrir el popup de detalle al hacer click en una fila del modo Lista, para cualquier rol autenticado que pueda ver esa fila. El popup MUST ser el mismo de `appointments-form`, con título "Detalle de Turno" y carga abortable. El click en un botón de la columna Acciones MUST NOT abrir el popup. El click en Confirmar MUST ejecutar la confirmación de `appointments-confirm`. El click en Cancelar MUST ejecutar la cancelación de `appointments-cancel`. El click en Llamar o Finalizar MUST NOT cambiar el estado del turno.
+El sistema SHALL abrir el popup de detalle al hacer click en una fila del modo Lista, para cualquier rol autenticado que pueda ver esa fila. El popup MUST ser el mismo de `appointments-form`, con título "Detalle de Turno" y carga abortable. El click en un botón de la columna Acciones MUST NOT abrir el popup. El click en Confirmar MUST ejecutar la confirmación de `appointments-confirm`. El click en Cancelar MUST ejecutar la cancelación de `appointments-cancel`. El click en Llamar MUST ejecutar el llamado de `appointments-call`. El click en Finalizar MUST ejecutar la finalización de `appointments-finalize`.
 
 #### Scenario: Click en fila abre Detalle de Turno
 

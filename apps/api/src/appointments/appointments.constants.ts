@@ -232,6 +232,24 @@ export const CONFIRMAR_TURNO_SOLO_HOY =
 export const CANCELAR_TURNO_ESTADO_INVALIDO =
   'Solo se pueden cancelar turnos en estado Programado o Confirmado' as const;
 
+export const LLAMAR_TURNO_SOLO_CONFIRMADO =
+  'Solo se pueden llamar turnos en estado Confirmado' as const;
+
+export const LLAMAR_TURNO_SOLO_HOY =
+  'Solo se pueden llamar turnos del día de hoy' as const;
+
+export const LLAMAR_SIN_CONSULTORIO =
+  'El médico no tiene consultorio asignado' as const;
+
+export const FINALIZAR_TURNO_SOLO_CONFIRMADO =
+  'Solo se pueden finalizar turnos en estado Confirmado' as const;
+
+export const FINALIZAR_TURNO_SOLO_HOY =
+  'Solo se pueden finalizar turnos del día de hoy' as const;
+
+export const FINALIZAR_SIN_LLAMADO =
+  'El turno debe ser llamado antes de finalizar' as const;
+
 /**
  * Normaliza un documento a dígitos.
  *

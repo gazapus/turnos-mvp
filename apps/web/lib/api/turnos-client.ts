@@ -236,3 +236,27 @@ export function cancelarTurno(
     body: JSON.stringify(body),
   });
 }
+
+/**
+ * Llama al paciente a sala de espera.
+ *
+ * @param id - UUID del turno.
+ * @returns Detalle actualizado.
+ */
+export function llamarTurno(id: string): Promise<TurnoDetalleDto> {
+  return apiFetch<TurnoDetalleDto>(`/api/turnos/${id}/llamar`, {
+    method: 'POST',
+  });
+}
+
+/**
+ * Finaliza un turno llamado (CONFIRMADO → ATENDIDO).
+ *
+ * @param id - UUID del turno.
+ * @returns Detalle actualizado.
+ */
+export function finalizarTurno(id: string): Promise<TurnoDetalleDto> {
+  return apiFetch<TurnoDetalleDto>(`/api/turnos/${id}/finalizar`, {
+    method: 'PATCH',
+  });
+}

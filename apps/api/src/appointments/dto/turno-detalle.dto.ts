@@ -18,6 +18,7 @@ type TurnoDetalleEntity = Turno & {
   paciente: Paciente;
   medico: { nombre: string; apellido: string };
   especialidad: { nombre: string };
+  _count?: { llamados: number };
 };
 
 /**
@@ -63,6 +64,9 @@ export class TurnoDetalleResponseDto implements TurnoDetalleDto {
   @ApiProperty({ nullable: true, type: String })
   motivoCancelacion!: string | null;
 
+  @ApiProperty({ description: 'True si el turno tiene al menos un llamado' })
+  llamado!: boolean;
+
   /**
    * Mapea un turno Prisma con relaciones al DTO de detalle.
    *
@@ -87,6 +91,7 @@ export class TurnoDetalleResponseDto implements TurnoDetalleDto {
     dto.estado = turno.estado;
     dto.notificarMail = turno.notificarMail;
     dto.motivoCancelacion = turno.motivoCancelacion;
+    dto.llamado = (turno._count?.llamados ?? 0) > 0;
     return dto;
   }
 }

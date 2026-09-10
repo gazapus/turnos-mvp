@@ -23,6 +23,8 @@ vi.mock('@/lib/api/turnos-client', () => ({
   fetchTurnos: vi.fn(),
   confirmarTurno: vi.fn(),
   cancelarTurno: vi.fn(),
+  llamarTurno: vi.fn(),
+  finalizarTurno: vi.fn(),
 }));
 
 const listaParams = {
@@ -48,6 +50,7 @@ function listItem(id: string): TurnoListItemDto {
     especialidad: { nombre: 'Cardiología' },
     estado: 'PROGRAMADO',
     tipo: 'PRIMER_TURNO',
+    llamado: false,
   };
 }
 
